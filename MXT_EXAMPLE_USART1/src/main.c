@@ -100,6 +100,18 @@
  } tImage;
 
 #include "icones/icone1.h"
+#include "icones/next_colorido.h"
+#include "icones/back_colorido.h"
+#include "icones/diario_azul.h"
+#include "icones/next.h"
+#include "icones/back.h"
+#include "icones/centrifuga_colorido.h"
+#include "icones/enxague_colorido.h"
+#include "icones/fast_colorido.h"
+#include "icones/locked_colorido.h"
+#include "icones/unlocked_colorido.h"
+#include "icones/pesado_colorido.h"
+
 
 /************************************************************************/
 /* DEFINES                                                              */
@@ -140,11 +152,11 @@ struct botao {
 	void (*p_handler)(void);
 };	
 
-void lavagem_callback(void){
+void back_callback(void){
 	
 }
 
-void secagem_callback(void){
+void next_callback(void){
 	
 }
 void Bool flag_next = false;
@@ -152,12 +164,17 @@ void next_callback(void){
 	flag_next = true;
 }
 
+void lock_callback(void){
+	
+}
+
+
 int processa_touch(struct botao b[], struct botao *rtn, uint N ,uint x, uint y ){
 	
-	for (int i = 0, i< N, i++){
-		if(x >= b[i]->x - BUTTON_W/2 && x <= b[i]->x + BUTTON_W/2){
-			if(y >= b[i]->y - BUTTON_H/2 && y<= b[i]->y + BUTTON_H/2) {
-				rtn = b[i];
+	for (int i = 0; i< N; i++){
+		if(x >= (b[i].x) - BUTTON_W/2 && x <= (b[i].x) + BUTTON_W/2){
+			if(y >= (b[i].y) - BUTTON_H/2 && y<= (b[i].y) + BUTTON_H/2) {
+				*rtn = b[i];
 				return 1;
 			}
 		}
@@ -302,7 +319,6 @@ uint32_t convert_axis_system_x(uint32_t touch_y) {
 	// saida: 0 - 320
 	return ILI9488_LCD_HEIGHT - ILI9488_LCD_HEIGHT*touch_y/4096;
 }
-
 uint32_t convert_axis_system_y(uint32_t touch_x) {
 	// entrada: 0 - 4096 (sistema de coordenadas atual)
 	// saida: 0 - 320
@@ -402,37 +418,103 @@ int main(void)
 	printf("\n\rmaXTouch data USART transmitter\n\r");
 		
 	/* -----------------------------------------------------*/
-	struct botao botaoLavagem;
-	botaoLavagem.x = 50;
-	botaoLavagem.y = 60;
-	botaoLavagem.size = 300;
-	botaoLavagem.p_handler = lavagem_callback;
-	botaoLavagem.image = &icone1;
 
-	struct botao botaoSecagem;
-	botaoSecagem.x = 60;
-	botaoSecagem.y = 60;
-	botaoSecagem.size = 300;
-	botaoSecagem.p_handler = secagem_callback;
-	botaoSecagem.image = &icone1;
+	struct botao botaoNext;
+	botaoNext.x = 384 - 32;
+	botaoNext.y = 170 - 32;
+	botaoNext.size = 128;
+	botaoNext.p_handler = next_callback;
+	botaoNext.image = &next_colorido;
 
+	struct botao botaoBack;
+	botaoBack.x = 106 - 32;
+	botaoBack.y = 170 - 32;
+	botaoBack.size = 128;
+	botaoBack.p_handler = next_callback;
+	botaoBack.image = &back_colorido;
+	
+	struct botao diarioAzul;
+	diarioAzul.x = 240 - 64;
+	diarioAzul.y = 130 - 64;
+	diarioAzul.size = 128;
+	diarioAzul.p_handler = next_callback;
+	diarioAzul.image = &diario_azul;
+	
+	struct botao centrifuga;
+	centrifuga.x = 240 - 64;
+	centrifuga.y = 130 - 64;
+	centrifuga.size = 128;
+	centrifuga.p_handler = next_callback;
+	centrifuga.image = &centrifuga_colorido;
+	
+	struct botao enxague;
+	enxague.x = 240 - 64;
+	enxague.y = 130 - 64;
+	enxague.size = 128;
+	enxague.p_handler = next_callback;
+	enxague.image = &enxague_colorido;
+	
+	struct botao fast;
+	fast.x = 240 - 64;
+	fast.y = 130 - 64;
+	fast.size = 128;
+	fast.p_handler = next_callback;
+	fast.image = &fast_colorido;
+	
+	struct botao pesado;
+	pesado.x = 240 - 64;
+	pesado.y = 130 - 64;
+	pesado.size = 128;
+	pesado.p_handler = next_callback;
+	pesado.image = &pesado_colorido;
+	
+	struct botao locked;
+	locked.x = 450 - 64;
+	locked.y = 300 - 64;
+	locked.size = 128;
+	locked.p_handler = next_callback;
+	locked.image = &locked_colorido;
+	
+	struct botao unlocked;
+	unlocked.x = 450 - 64;
+	unlocked.y = 300 - 64;
+	unlocked.size = 128;
+	unlocked.p_handler = lock_callback;
+	unlocked.image = &unlocked_colorido;
 
-	ili9488_draw_pixmap(botaoSecagem.x, 
-						botaoSecagem.y, 
-						botaoSecagem.image->width, 
-						botaoSecagem.image->height, 
-						botaoSecagem.image->data);
+	ili9488_draw_pixmap(botaoNext.x, 
+						botaoNext.y, 
+						botaoNext.image->width, 
+						botaoNext.image->height, 
+						botaoNext.image->data);
 						
+	ili9488_draw_pixmap(botaoBack.x,
+	botaoBack.y,
+	botaoBack.image->width,
+	botaoBack.image->height,
+	botaoBack.image->data);						
+
+	ili9488_draw_pixmap(diarioAzul.x,
+	diarioAzul.y,
+	diarioAzul.image->width,
+	diarioAzul.image->height,
+	diarioAzul.image->data);
+
+	ili9488_draw_pixmap(locked.x,
+	locked.y,
+	locked.image->width,
+	locked.image->height,
+	locked.image->data);
+	
 
 	
 	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
-	ili9488_draw_string(botaoSecagem.x + botaoSecagem.image->width + 10,
-						botaoSecagem.y + botaoSecagem.image->height/2, 
-						"Local" );
+	
+
 	//draw_button(0);
 	draw_timer(5,3,5);
 	
-	struct botao botoes[] = {&botaoLavagem, &botaoSecagem};
+	struct botao botoes[] = {&botaoNext, &botaoBack};
 	/* -----------------------------------------------------*/
 
 	while (true) {
