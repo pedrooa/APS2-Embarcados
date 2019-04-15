@@ -101,6 +101,24 @@
 
 #include "icones/icone1.h"
 
+/************************************************************************/
+/* DEFINES                                                              */
+/************************************************************************/
+
+/**
+ *  Informacoes para o RTC
+ *  poderia ser extraida do __DATE__ e __TIME__
+ *  ou ser atualizado pelo PC.
+ */
+#define YEAR        2018
+#define MOUNT       3
+#define DAY         19
+#define WEEK        12
+#define HOUR        15
+#define MINUTE      45
+#define SECOND      0
+
+
 #define MAX_ENTRIES        3
 #define STRING_LENGTH     70
 
@@ -111,7 +129,7 @@ const uint32_t BUTTON_W = 80;
 const uint32_t BUTTON_H = 60;
 const uint32_t BUTTON_BORDER = 2;
 const uint32_t BUTTON_X = 40; // BUTTON_W/2
-const uint32_t BUTTON_Y = ILI9488_LCD_HEIGHT-31;
+const uint32_t BUTTON_Y = 320-50;
 	
 /** \brief Touch event struct */
 struct botao {
@@ -132,6 +150,16 @@ void secagem_callback(void){
 
 int processa_touch(struct botao b[], struct botao *rtn, uint N ,uint x, uint y ){
 	
+	for (int i = 0, i< N, i++){
+		if(x >= b[i]->x - BUTTON_W/2 && x <= b[i]->x + BUTTON_W/2){
+			if(y >= b[i]->y - BUTTON_H/2 && y<= b[i]->y + BUTTON_H/2) {
+				rtn = b[i];
+				return 1;
+			}
+		}
+	}
+	return 0;
+
 }
 
 	
@@ -243,7 +271,12 @@ void draw_screen(void) {
 	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
 	ili9488_draw_filled_rectangle(0, 0, ILI9488_LCD_WIDTH-1, ILI9488_LCD_HEIGHT-1);
 }
-
+void draw_timer(int enxagueQnt, int enxagueTempo, int centrifugacaoTempo){
+		char b[512];
+		int Tempo_ciclo = enxagueQnt*enxagueTempo + centrifugacaoTempo; // Minutos
+		sprintf(b,"Tempo: 00 : %02d",Tempo_ciclo);
+		ili9488_draw_string(10,10,b );
+}
 void draw_button(uint32_t clicked) {
 	static uint32_t last_state = 255; // undefined
 	if(clicked == last_state) return;
@@ -263,20 +296,22 @@ void draw_button(uint32_t clicked) {
 uint32_t convert_axis_system_x(uint32_t touch_y) {
 	// entrada: 4096 - 0 (sistema de coordenadas atual)
 	// saida: 0 - 320
-	return ILI9488_LCD_WIDTH - ILI9488_LCD_WIDTH*touch_y/4096;
+	return ILI9488_LCD_HEIGHT - ILI9488_LCD_HEIGHT*touch_y/4096;
 }
 
 uint32_t convert_axis_system_y(uint32_t touch_x) {
 	// entrada: 0 - 4096 (sistema de coordenadas atual)
 	// saida: 0 - 320
-	return ILI9488_LCD_HEIGHT*touch_x/4096;
+	return ILI9488_LCD_WIDTH - ILI9488_LCD_WIDTH*touch_x/4096;
 }
 
 void update_screen(uint32_t tx, uint32_t ty) {
 	if(tx >= BUTTON_X-BUTTON_W/2 && tx <= BUTTON_X + BUTTON_W/2) {
-		if(ty >= BUTTON_Y-BUTTON_H/2 && ty <= BUTTON_Y) {
+		if(ty > BUTTON_Y && ty <= BUTTON_Y+BUTTON_H/2) {
+			printf("Entrou 1");
 			draw_button(1);
 		} else if(ty > BUTTON_Y && ty < BUTTON_Y + BUTTON_H/2) {
+			printf("Entrou 0");
 			draw_button(0);
 		}
 	}
@@ -303,17 +338,21 @@ void mxt_handler(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
 		}
 		
 		 // eixos trocados (quando na vertical LCD)
-		uint32_t conv_x = convert_axis_system_x(touch_event.y);
-		uint32_t conv_y = convert_axis_system_y(touch_event.x);
+		uint32_t conv_y = convert_axis_system_x(touch_event.y);
+		uint32_t conv_x = convert_axis_system_y(touch_event.x);
+		//conv_y = ILI9488_LCD_HEIGHT - conv_y;
+		//uint32_t conv_y = touch_event.y;
+		//uint32_t conv_x = touch_event.x;
+		
 		
 		/* Format a new entry in the data string that will be sent over USART */
 		sprintf(buf, "X:%3d Y:%3d \n", conv_x, conv_y);
-		
+		//update_screen(conv_x, conv_y);
 		/* -----------------------------------------------------*/
 		struct botao bAtual;
 		if(processa_touch(botoes, &bAtual, Nbotoes, conv_x, conv_y))
 			bAtual.p_handler();
-		//update_screen(conv_x, conv_y);
+		
 		/* -----------------------------------------------------*/
 
 		/* Add the new string to the string buffer */
@@ -347,6 +386,7 @@ int main(void)
 	board_init();  /* Initialize board */
 	configure_lcd();
 	draw_screen();
+	
 	draw_button(0);
 	/* Initialize the mXT touch device */
 	mxt_init(&device);
@@ -360,14 +400,14 @@ int main(void)
 	struct botao botaoLavagem;
 	botaoLavagem.x = 50;
 	botaoLavagem.y = 60;
-	botaoLavagem.size = 100;
+	botaoLavagem.size = 300;
 	botaoLavagem.p_handler = lavagem_callback;
 	botaoLavagem.image = &icone1;
 
 	struct botao botaoSecagem;
-	botaoSecagem.x = 150;
+	botaoSecagem.x = 60;
 	botaoSecagem.y = 60;
-	botaoSecagem.size = 100;
+	botaoSecagem.size = 300;
 	botaoSecagem.p_handler = secagem_callback;
 	botaoSecagem.image = &icone1;
 
@@ -385,6 +425,7 @@ int main(void)
 						botaoSecagem.y + botaoSecagem.image->height/2, 
 						"Local" );
 	//draw_button(0);
+	draw_timer(5,3,5);
 	
 	struct botao botoes[] = {&botaoLavagem, &botaoSecagem};
 	/* -----------------------------------------------------*/
