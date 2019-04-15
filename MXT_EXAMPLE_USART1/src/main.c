@@ -147,6 +147,10 @@ void lavagem_callback(void){
 void secagem_callback(void){
 	
 }
+void Bool flag_next = false;
+void next_callback(void){
+	flag_next = true;
+}
 
 int processa_touch(struct botao b[], struct botao *rtn, uint N ,uint x, uint y ){
 	
@@ -381,6 +385,7 @@ int main(void)
 		.paritytype   = USART_SERIAL_PARITY,
 		.stopbits     = USART_SERIAL_STOP_BIT
 	};
+	int tipo_lavagem = 0;
 
 	sysclk_init(); /* Initialize system clocks */
 	board_init();  /* Initialize board */
@@ -435,6 +440,11 @@ int main(void)
 		 * message is found in the queue */
 		if (mxt_is_message_pending(&device)) {
 			mxt_handler(&device, botoes, 2);
+		}
+		if(flag_next == true){
+			tipo_lavagem += 1;
+			if (tipo_lavagem == 0 ){
+				
 		}
 		
 	}
