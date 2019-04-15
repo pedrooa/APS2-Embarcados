@@ -156,10 +156,7 @@ void back_callback(void){
 	
 }
 
-void next_callback(void){
-	
-}
-void Bool flag_next = false;
+volatile Bool flag_next = false;
 void next_callback(void){
 	flag_next = true;
 }
@@ -172,13 +169,17 @@ void lock_callback(void){
 int processa_touch(struct botao b[], struct botao *rtn, uint N ,uint x, uint y ){
 	
 	for (int i = 0; i< N; i++){
-		if(x >= (b[i].x) - BUTTON_W/2 && x <= (b[i].x) + BUTTON_W/2){
-			if(y >= (b[i].y) - BUTTON_H/2 && y<= (b[i].y) + BUTTON_H/2) {
+		printf("");
+		if(x >= (b[i].x) && x <= (b[i].x) +(b[i].size)){
+			
+			if(y >= (b[i].y) && y<= (b[i].y) + (b[i].size)) {
 				*rtn = b[i];
+				printf("foi");
 				return 1;
 			}
 		}
 	}
+	printf("Nao foi");
 	return 0;
 
 }
@@ -378,6 +379,40 @@ void mxt_handler(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
 		/* Add the new string to the string buffer */
 		strcat(tx_buf, buf);
 		i++;
+		
+		break;
+
+		/* Check if there is still messages in the queue and
+		 * if we have reached the maximum numbers of events */
+	} while ((mxt_is_message_pending(device)) & (i < MAX_ENTRIES));
+
+	/* If there is any entries in the buffer, send them over USART */
+	if (i > 0) {
+		usart_serial_write_packet(USART_SERIAL_EXAMPLE, (uint8_t *)tx_buf, strlen(tx_buf));
+	}
+}
+
+
+void mxt_debounce(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
+{
+	/* USART tx buffer initialized to 0 */
+	char tx_buf[STRING_LENGTH * MAX_ENTRIES] = {0};
+	uint8_t i = 0; /* Iterator */
+
+	/* Temporary touch event data struct */
+	struct mxt_touch_event touch_event;
+
+	/* Collect touch events and put the data in a string,
+	 * maximum 2 events at the time */
+	do {
+		/* Temporary buffer for each new touch event line */
+		char buf[STRING_LENGTH];
+	
+		/* Read next next touch event in the queue, discard if read fails */
+		if (mxt_read_touch_event(device, &touch_event) != STATUS_OK) {
+			continue;
+		}	
+		i++;
 
 		/* Check if there is still messages in the queue and
 		 * if we have reached the maximum numbers of events */
@@ -419,20 +454,27 @@ int main(void)
 		
 	/* -----------------------------------------------------*/
 
-	struct botao botaoNext;
-	botaoNext.x = 384 - 32;
-	botaoNext.y = 170 - 32;
-	botaoNext.size = 128;
-	botaoNext.p_handler = next_callback;
-	botaoNext.image = &next_colorido;
+	struct botao botaoNext = {.x=384-32,.y=170-32,.size=64,.p_handler = next_callback, .image = &next_colorido};
+	struct botao botaoBack = {.x=106-32,.y=170-32,.size=64,.p_handler = next_callback, .image = &back_colorido};
 
-	struct botao botaoBack;
+
+/*
+struct botao botaoNext;
+botaoNext.x = 384 - 32;
+botaoNext.y = 170 - 32;
+botaoNext.size = 64;
+botaoNext.p_handler = next_callback;
+botaoNext.image = &next_colorido;*/
+
+/*
 	botaoBack.x = 106 - 32;
 	botaoBack.y = 170 - 32;
-	botaoBack.size = 128;
+	botaoBack.size = 64;
 	botaoBack.p_handler = next_callback;
-	botaoBack.image = &back_colorido;
+	botaoBack.image = &back_colorido;*/
 	
+
+
 	struct botao diarioAzul;
 	diarioAzul.x = 240 - 64;
 	diarioAzul.y = 130 - 64;
@@ -514,7 +556,7 @@ int main(void)
 	//draw_button(0);
 	draw_timer(5,3,5);
 	
-	struct botao botoes[] = {&botaoNext, &botaoBack};
+	struct botao botoes[] = {botaoNext, botaoBack};
 	/* -----------------------------------------------------*/
 
 	while (true) {
@@ -522,13 +564,53 @@ int main(void)
 		 * message is found in the queue */
 		if (mxt_is_message_pending(&device)) {
 			mxt_handler(&device, botoes, 2);
+			delay_ms(500);
+			mxt_debounce(&device, botoes, 2);
 		}
 		if(flag_next == true){
 			tipo_lavagem += 1;
-			if (tipo_lavagem == 0 ){
-				
+			if (tipo_lavagem%5 == 0 ){
+					//ili9488_draw_filled_rectangle(240-64,130-64,240+64,130+64);
+					ili9488_draw_pixmap(diarioAzul.x,
+					diarioAzul.y,
+					diarioAzul.image->width,
+					diarioAzul.image->height,
+					diarioAzul.image->data);
 		}
-		
+			if (tipo_lavagem%5 == 1 ){
+			//	ili9488_draw_filled_rectangle(240-64,130-64,240+64,130+64);
+				ili9488_draw_pixmap(centrifuga.x,
+				centrifuga.y,
+				centrifuga.image->width,
+				centrifuga.image->height,
+				centrifuga.image->data);
+			}
+			if (tipo_lavagem%5 == 2 ){
+				//ili9488_draw_filled_rectangle(240-64,130-64,240+64,130+64);
+				ili9488_draw_pixmap(enxague.x,
+				enxague.y,
+				enxague.image->width,
+				enxague.image->height,
+				enxague.image->data);
+			}
+			if (tipo_lavagem%5 == 3 ){
+				//ili9488_draw_filled_rectangle(240-64,130-64,240+64,130+64);
+				ili9488_draw_pixmap(fast.x,
+				fast.y,
+				fast.image->width,
+				fast.image->height,
+				fast.image->data);
+			}
+			if (tipo_lavagem%5 == 4 ){
+				//ili9488_draw_filled_rectangle(240-64,130-64,240+64,130+64);
+				ili9488_draw_pixmap(pesado.x,
+				pesado.y,
+				pesado.image->width,
+				pesado.image->height,
+				pesado.image->data);
+			}
+		flag_next = false;
+	}
 	}
 
 	return 0;
