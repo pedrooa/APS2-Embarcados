@@ -84,7 +84,11 @@
  * Support and FAQ: visit <a href="https://www.microchip.com/support/">Microchip Support</a>
  */
 
+//#include "tfont.h"
+//#include "calibri_36.h"
+//#include "arial_72.h"
 #include <asf.h>
+#include <maquina1.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -151,9 +155,9 @@ struct botao {
 	tImage *image;
 	void (*p_handler)(void);
 };	
-
+volatile Bool flag_back = false;
 void back_callback(void){
-	
+	flag_back = true;
 }
 
 volatile Bool flag_next = false;
@@ -184,7 +188,21 @@ int processa_touch(struct botao b[], struct botao *rtn, uint N ,uint x, uint y )
 
 }
 
-	
+/*
+void font_draw_text(tFont *font, const char *text, int x, int y, int spacing) {
+	char *p = text;
+	while(*p != NULL) {
+		char letter = *p;
+		int letter_offset = letter - font->start_char;
+		if(letter <= font->end_char) {
+			tChar *current_char = font->chars + letter_offset;
+			ili9488_draw_pixmap(x, y, current_char->image->width, current_char->image->height, current_char->image->data);
+			x += current_char->image->width + spacing;
+		}
+		p++;
+	}
+}*/
+
 static void configure_lcd(void){
 	/* Initialize display parameter */
 	g_ili9488_display_opt.ul_width = ILI9488_LCD_WIDTH;
@@ -297,6 +315,7 @@ void draw_timer(int enxagueQnt, int enxagueTempo, int centrifugacaoTempo){
 		char b[512];
 		int Tempo_ciclo = enxagueQnt*enxagueTempo + centrifugacaoTempo; // Minutos
 		sprintf(b,"Tempo: 00 : %02d",Tempo_ciclo);
+		//font_draw_text(&arial_72, b, 10, 2, 2)
 		ili9488_draw_string(10,10,b );
 }
 void draw_button(uint32_t clicked) {
@@ -443,7 +462,7 @@ int main(void)
 	configure_lcd();
 	draw_screen();
 	
-	draw_button(0);
+	//draw_button(0);
 	/* Initialize the mXT touch device */
 	mxt_init(&device);
 	
@@ -456,23 +475,6 @@ int main(void)
 
 	struct botao botaoNext = {.x=384-32,.y=170-32,.size=64,.p_handler = next_callback, .image = &next_colorido};
 	struct botao botaoBack = {.x=106-32,.y=170-32,.size=64,.p_handler = next_callback, .image = &back_colorido};
-
-
-/*
-struct botao botaoNext;
-botaoNext.x = 384 - 32;
-botaoNext.y = 170 - 32;
-botaoNext.size = 64;
-botaoNext.p_handler = next_callback;
-botaoNext.image = &next_colorido;*/
-
-/*
-	botaoBack.x = 106 - 32;
-	botaoBack.y = 170 - 32;
-	botaoBack.size = 64;
-	botaoBack.p_handler = next_callback;
-	botaoBack.image = &back_colorido;*/
-	
 
 
 	struct botao diarioAzul;
@@ -541,6 +543,10 @@ botaoNext.image = &next_colorido;*/
 	diarioAzul.image->width,
 	diarioAzul.image->height,
 	diarioAzul.image->data);
+	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
+	ili9488_draw_filled_rectangle(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,diarioAzul.x + diarioAzul.size+40,diarioAzul.y+diarioAzul.size+40);
+	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
+	ili9488_draw_string(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,"Ciclo Diario" );
 
 	ili9488_draw_pixmap(locked.x,
 	locked.y,
@@ -554,7 +560,7 @@ botaoNext.image = &next_colorido;*/
 	
 
 	//draw_button(0);
-	draw_timer(5,3,5);
+	draw_timer(c_rapido.enxagueTempo,c_rapido.enxagueQnt,c_rapido.centrifugacaoTempo);
 	
 	struct botao botoes[] = {botaoNext, botaoBack};
 	/* -----------------------------------------------------*/
@@ -565,10 +571,16 @@ botaoNext.image = &next_colorido;*/
 		if (mxt_is_message_pending(&device)) {
 			mxt_handler(&device, botoes, 2);
 			delay_ms(500);
-			mxt_debounce(&device, botoes, 2);
+			mxt_debounce(&device, botoes, 1);
 		}
-		if(flag_next == true){
-			tipo_lavagem += 1;
+		if(flag_next == true || flag_back == true){
+			if(flag_next == true){
+				tipo_lavagem += 1;
+			}
+			else if(flag_back == true){
+				tipo_lavagem -= 1;
+			}
+
 			if (tipo_lavagem%5 == 0 ){
 					//ili9488_draw_filled_rectangle(240-64,130-64,240+64,130+64);
 					ili9488_draw_pixmap(diarioAzul.x,
@@ -576,6 +588,13 @@ botaoNext.image = &next_colorido;*/
 					diarioAzul.image->width,
 					diarioAzul.image->height,
 					diarioAzul.image->data);
+					ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
+					ili9488_draw_filled_rectangle(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,diarioAzul.x + diarioAzul.size+40,diarioAzul.y+diarioAzul.size+40);
+					ili9488_draw_filled_rectangle(0,0,200,40);
+					ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
+					ili9488_draw_string(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,"Ciclo Diario" );	
+					draw_timer(c_diario.enxagueTempo,c_diario.enxagueQnt,c_diario.centrifugacaoTempo);
+
 		}
 			if (tipo_lavagem%5 == 1 ){
 			//	ili9488_draw_filled_rectangle(240-64,130-64,240+64,130+64);
@@ -584,6 +603,14 @@ botaoNext.image = &next_colorido;*/
 				centrifuga.image->width,
 				centrifuga.image->height,
 				centrifuga.image->data);
+				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
+				ili9488_draw_filled_rectangle(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,diarioAzul.x + diarioAzul.size+40,diarioAzul.y+diarioAzul.size+40);
+				ili9488_draw_filled_rectangle(0,0,200,40);
+				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
+				ili9488_draw_string(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,"Centrifuga" );
+					draw_timer(c_centrifuga.enxagueTempo,c_centrifuga.enxagueQnt,c_centrifuga.centrifugacaoTempo);
+
+
 			}
 			if (tipo_lavagem%5 == 2 ){
 				//ili9488_draw_filled_rectangle(240-64,130-64,240+64,130+64);
@@ -592,6 +619,14 @@ botaoNext.image = &next_colorido;*/
 				enxague.image->width,
 				enxague.image->height,
 				enxague.image->data);
+				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
+				ili9488_draw_filled_rectangle(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,diarioAzul.x + diarioAzul.size+40,diarioAzul.y+diarioAzul.size+40);
+				ili9488_draw_filled_rectangle(0,0,200,40);				
+				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));				
+				ili9488_draw_string(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,"Enxague" );
+					draw_timer(c_enxague.enxagueTempo,c_enxague.enxagueQnt,c_enxague.centrifugacaoTempo);
+
+
 			}
 			if (tipo_lavagem%5 == 3 ){
 				//ili9488_draw_filled_rectangle(240-64,130-64,240+64,130+64);
@@ -600,6 +635,14 @@ botaoNext.image = &next_colorido;*/
 				fast.image->width,
 				fast.image->height,
 				fast.image->data);
+				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
+				ili9488_draw_filled_rectangle(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,diarioAzul.x + diarioAzul.size+40,diarioAzul.y+diarioAzul.size+40);
+				ili9488_draw_filled_rectangle(0,0,200,40);				
+				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));				
+				ili9488_draw_string(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,"Ciclo Rapido" );
+					draw_timer(c_rapido.enxagueTempo,c_rapido.enxagueQnt,c_rapido.centrifugacaoTempo);
+
+				
 			}
 			if (tipo_lavagem%5 == 4 ){
 				//ili9488_draw_filled_rectangle(240-64,130-64,240+64,130+64);
@@ -608,8 +651,17 @@ botaoNext.image = &next_colorido;*/
 				pesado.image->width,
 				pesado.image->height,
 				pesado.image->data);
+				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
+				ili9488_draw_filled_rectangle(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,diarioAzul.x + diarioAzul.size+40,diarioAzul.y+diarioAzul.size+40);
+				ili9488_draw_filled_rectangle(0,0,200,40);
+				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
+				ili9488_draw_string(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,"Ciclo Pesado" );
+					draw_timer(c_pesado.enxagueTempo,c_pesado.enxagueQnt,c_pesado.centrifugacaoTempo);
+
+				
 			}
 		flag_next = false;
+		flag_back = false;
 	}
 	}
 
