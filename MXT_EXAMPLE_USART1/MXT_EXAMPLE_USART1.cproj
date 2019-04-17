@@ -691,6 +691,24 @@
     <Folder Include="src\icones\" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="src\arial_72.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\icones\fast2.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\calibri_24.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\icones\stop.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\maquina1.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\tfont.h">
+      <SubType>compile</SubType>
+    </Compile>
     <None Include="src\asf.h">
       <SubType>compile</SubType>
     </None>
@@ -1354,6 +1372,9 @@
     <None Include="src\config\conf_ili9488.h">
       <SubType>compile</SubType>
     </None>
+    <Compile Include="src\calibri_36.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\icones\back_colorido.h">
       <SubType>compile</SubType>
     </Compile>
@@ -1394,6 +1415,9 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\icones\pesado_preto.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\icones\start.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\main.c">

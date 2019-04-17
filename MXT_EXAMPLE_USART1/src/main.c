@@ -84,9 +84,25 @@
  * Support and FAQ: visit <a href="https://www.microchip.com/support/">Microchip Support</a>
  */
 
-//#include "tfont.h"
-//#include "calibri_36.h"
-//#include "arial_72.h"
+/**
+* - TODO [x] Tela 2 quando clica o botao start
+* - TODO [x] Implementar funcao de lock
+* - TODO [x] Feedback sonoro dos botoes com Buzzer
+* - TODO [x] Implementar funcao da porta aberta
+* - TODO [x] Colocar fonte nos textos
+* - TODO [ ] Cronometro do fim da lavagem
+* - TODO [ ] Animacao do tempo de carregamento
+* - TODO [ ] FAZER MAIS DE DOIS BOTOES FUNCIONAREM NA LISTA
+* - TODO [ ] BOTOES AINDA ESTAO COM TOQUE DUPLO
+* - TODO [ ] DESCOMENTAR A ATIVACAO DO BUZZER(JA FOI IMPLEMENTADO)
+*/
+/************************************************************************/
+/* includes                                                             */
+/************************************************************************/
+#include "tfont.h"
+#include "calibri_36.h"
+#include "calibri_24.h"
+#include "arial_72.h"
 #include <asf.h>
 #include <maquina1.h>
 #include <stdlib.h>
@@ -96,30 +112,56 @@
 #include "conf_example.h"
 #include "conf_uart_serial.h"
 
+//ICONS
+
+#include "icones/next_colorido.h"			//author: https://www.flaticon.com/authors/smashicons
+#include "icones/back_colorido.h"			//author: https://www.flaticon.com/authors/smashicons
+#include "icones/diario_azul.h"				//author: https://www.flaticon.com/authors/smashicons
+#include "icones/centrifuga_colorido.h"		//author: https://www.flaticon.com/authors/pixelmeetup
+#include "icones/enxague_colorido.h"		//author: https://www.flaticon.com/authors/smalllikeart
+#include "icones/fast_colorido.h"			//author: https://www.flaticon.com/authors/freepik
+#include "icones/locked_colorido.h"			//author: https://www.flaticon.com/authors/smashicons
+#include "icones/unlocked_colorido.h"		//author: https://www.flaticon.com/authors/smashicons
+#include "icones/pesado_colorido.h"			//author: https://www.flaticon.com/authors/freepik
+#include "icones/fast2.h"					//author: https://www.flaticon.com/authors/smashicons
+#include "icones/stop.h"					//author: https://www.flaticon.com/authors/smashicons
+
+/************************************************************************/
+/* STRUCTS                                                              */
+/************************************************************************/
+
+/*
  typedef struct {
 	 const uint8_t *data;
 	 uint16_t width;
 	 uint16_t height;
 	 uint8_t dataSize;
  } tImage;
-
-#include "icones/icone1.h"
-#include "icones/next_colorido.h"
-#include "icones/back_colorido.h"
-#include "icones/diario_azul.h"
-#include "icones/next.h"
-#include "icones/back.h"
-#include "icones/centrifuga_colorido.h"
-#include "icones/enxague_colorido.h"
-#include "icones/fast_colorido.h"
-#include "icones/locked_colorido.h"
-#include "icones/unlocked_colorido.h"
-#include "icones/pesado_colorido.h"
+ */
 
 
 /************************************************************************/
 /* DEFINES                                                              */
 /************************************************************************/
+
+//PB2 - BOTAO PORTA
+#define PORTA_PIO          PIOA
+#define PORTA_PIO_ID        10
+#define PORTA_PIO_IDX       11u
+#define PORTA_PIO_IDX_MASK  (1u << PORTA_PIO_IDX)
+
+//PB0 - BUZZER
+#define BUZZER_PIO           PIOB
+#define BUZZER_PIO_ID        11
+#define BUZZER_PIO_IDX       0u
+#define BUZZER_PIO_IDX_MASK  (1u << BUZZER_PIO_IDX)
+
+//PB1 - LED PORTA
+#define LED_PIO           PIOC
+#define LED_PIO_ID        12
+#define LED_PIO_IDX       8u
+#define LED_PIO_IDX_MASK  (1u << LED_PIO_IDX)
+
 
 /**
  *  Informacoes para o RTC
@@ -137,16 +179,27 @@
 
 #define MAX_ENTRIES        3
 #define STRING_LENGTH     70
-
 #define USART_TX_MAX_LENGTH     0xff
 
+/************************************************************************/
+/* variaveis globais                                                    */
+/************************************************************************/
 struct ili9488_opt_t g_ili9488_display_opt;
 const uint32_t BUTTON_W = 80;
 const uint32_t BUTTON_H = 60;
 const uint32_t BUTTON_BORDER = 2;
 const uint32_t BUTTON_X = 40; // BUTTON_W/2
 const uint32_t BUTTON_Y = 320-50;
-	
+
+volatile Bool locked = false;
+volatile Bool flag_back = false;	
+volatile Bool flag_next = false;
+volatile Bool isWashing = false;
+volatile Bool isOpen = false;
+volatile Bool isDrawn = false;
+volatile Bool flag_button = false;
+volatile int flag_started = 0;
+
 /** \brief Touch event struct */
 struct botao {
 	uint16_t x;
@@ -155,21 +208,54 @@ struct botao {
 	tImage *image;
 	void (*p_handler)(void);
 };	
-volatile Bool flag_back = false;
+
+
+
+/************************************************************************/
+/* handler / callbacks                                                  */
+/************************************************************************/
 void back_callback(void){
+	printf("NEXT  ");
+	printf("%d  ",flag_started );
 	flag_back = true;
 }
-
-volatile Bool flag_next = false;
 void next_callback(void){
+	printf("BACK  ");
+	printf("%d  ",flag_started );
 	flag_next = true;
 }
 
 void lock_callback(void){
-	
+	locked = !locked;
+	isDrawn = false;
+}
+
+void PORTA_callback(void){
+	flag_button = true;
+}
+void start_callback(void){
+	flag_started = !flag_started;
+	isDrawn = false;
+	printf("   artFLAG EH :%d   ", flag_started);
 }
 
 
+
+struct botao botaoNext  = {.x=384-32,.y=160-32,.size=64,.p_handler = next_callback, .image = &next_colorido};
+struct botao botaoBack  = {.x=106-32,.y=160-32,.size=64,.p_handler = back_callback, .image = &back_colorido};
+struct botao botaoStart = {.x=240-32,.y=280-32,.size=64,.p_handler = start_callback, .image = &fast2};
+struct botao diarioAzul = {.x=240-64,.y=120-64,.size=128,.p_handler = next_callback, .image = &diario_azul};
+struct botao centrifuga	= {.x=240-64,.y=120-64,.size=128,.p_handler = next_callback, .image = &centrifuga_colorido};
+struct botao enxague	= {.x=240-64,.y=120-64,.size=128,.p_handler = next_callback, .image = &enxague_colorido};
+struct botao fast		= {.x=240-64,.y=120-64,.size=128,.p_handler = next_callback, .image = &fast_colorido};
+struct botao pesado		= {.x=240-64,.y=120-64,.size=128,.p_handler = next_callback, .image = &pesado_colorido};
+struct botao bLocked	= {.x=450-64,.y=305-64,.size=128,.p_handler = lock_callback, .image = &unlocked_colorido};
+struct botao bUnlocked	= {.x=450-64,.y=305-64,.size=128,.p_handler = lock_callback, .image = &locked_colorido};
+struct botao botaoStop	= {.x=240-32,.y=280-32,.size=64,.p_handler = start_callback, .image = &stop};
+
+/************************************************************************/
+/* funcoes                                                              */
+/************************************************************************/
 int processa_touch(struct botao b[], struct botao *rtn, uint N ,uint x, uint y ){
 	
 	for (int i = 0; i< N; i++){
@@ -179,6 +265,9 @@ int processa_touch(struct botao b[], struct botao *rtn, uint N ,uint x, uint y )
 			if(y >= (b[i].y) && y<= (b[i].y) + (b[i].size)) {
 				*rtn = b[i];
 				printf("foi");
+				//pio_set(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
+				//delay_ms(60);
+				//pio_clear(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
 				return 1;
 			}
 		}
@@ -188,7 +277,7 @@ int processa_touch(struct botao b[], struct botao *rtn, uint N ,uint x, uint y )
 
 }
 
-/*
+
 void font_draw_text(tFont *font, const char *text, int x, int y, int spacing) {
 	char *p = text;
 	while(*p != NULL) {
@@ -201,7 +290,7 @@ void font_draw_text(tFont *font, const char *text, int x, int y, int spacing) {
 		}
 		p++;
 	}
-}*/
+}
 
 static void configure_lcd(void){
 	/* Initialize display parameter */
@@ -213,15 +302,6 @@ static void configure_lcd(void){
 	/* Initialize LCD */
 	ili9488_init(&g_ili9488_display_opt);
 }
-
-/**
- * \brief Set maXTouch configuration
- *
- * This function writes a set of predefined, optimal maXTouch configuration data
- * to the maXTouch Xplained Pro.
- *
- * \param device Pointer to mxt_device struct
- */
 static void mxt_init(struct mxt_device *device)
 {
 	enum status_code status;
@@ -307,16 +387,12 @@ static void mxt_init(struct mxt_device *device)
 			+ MXT_GEN_COMMANDPROCESSOR_CALIBRATE, 0x01);
 }
 
-void draw_screen(void) {
-	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
-	ili9488_draw_filled_rectangle(0, 0, ILI9488_LCD_WIDTH-1, ILI9488_LCD_HEIGHT-1);
-}
-void draw_timer(int enxagueQnt, int enxagueTempo, int centrifugacaoTempo){
+
+void draw_time(int enxagueQnt, int enxagueTempo, int centrifugacaoTempo){
 		char b[512];
-		int Tempo_ciclo = enxagueQnt*enxagueTempo + centrifugacaoTempo; // Minutos
-		sprintf(b,"Tempo: 00 : %02d",Tempo_ciclo);
-		//font_draw_text(&arial_72, b, 10, 2, 2)
-		ili9488_draw_string(10,10,b );
+		int Tempo_ciclo = enxagueQnt * enxagueTempo + centrifugacaoTempo; // Minutos
+		sprintf(b, "Tempo: 00 : %02d", Tempo_ciclo);
+		font_draw_text(&calibri_24, b, 12, 12, 1);
 }
 void draw_button(uint32_t clicked) {
 	static uint32_t last_state = 255; // undefined
@@ -411,7 +487,6 @@ void mxt_handler(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
 	}
 }
 
-
 void mxt_debounce(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
 {
 	/* USART tx buffer initialized to 0 */
@@ -443,7 +518,104 @@ void mxt_debounce(struct mxt_device *device, struct botao botoes[], uint Nbotoes
 	}
 }
 
+void io_init(void){
+	// Inicializa clock do periférico PIO responsavel pelo botao
+	pmc_enable_periph_clk(PORTA_PIO_ID);
+	pmc_enable_periph_clk(LED_PIO_ID);
+	pmc_enable_periph_clk(BUZZER_PIO_ID);
+	
+	// Configura PIO para lidar com o pino do botão como entrada
+	// com pull-up
+	pio_configure(PORTA_PIO, PIO_INPUT, PORTA_PIO_IDX_MASK, PIO_PULLUP);
+	pio_set_output(BUZZER_PIO, BUZZER_PIO_IDX_MASK, 0, 0, 0);
+	pio_set_output(LED_PIO, LED_PIO_IDX_MASK, 0, 0, 0);
+	
+	// Configura interrupção no pino referente ao botao e associa
+	// função de callback caso uma interrupção for gerada
+	// a função de callback é a: but_callback()
+	pio_handler_set(PORTA_PIO, PORTA_PIO_ID, PORTA_PIO_IDX_MASK, PIO_IT_RISE_EDGE, PORTA_callback);
+	
+	// Ativa interrupção
+	pio_enable_interrupt(PORTA_PIO, PORTA_PIO_IDX_MASK);
 
+	// Configura NVIC para receber interrupcoes do PIO do botao
+	// com prioridade 4 (quanto mais próximo de 0 maior)
+	NVIC_EnableIRQ(PORTA_PIO_ID);
+	NVIC_SetPriority(PORTA_PIO_ID, 4); // Prioridade 4
+}
+
+void draw_menu_screen(void) {
+	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
+	ili9488_draw_filled_rectangle(0, 0, ILI9488_LCD_WIDTH-1, ILI9488_LCD_HEIGHT-1);
+	
+	ili9488_draw_pixmap(botaoNext.x, botaoNext.y, botaoNext.image->width, botaoNext.image->height, botaoNext.image->data);
+	ili9488_draw_pixmap(botaoBack.x, botaoBack.y, botaoBack.image->width, botaoBack.image->height, botaoBack.image->data);
+	ili9488_draw_pixmap(botaoStart.x, botaoStart.y, botaoStart.image->width, botaoStart.image->height, botaoStart.image->data);
+	ili9488_draw_pixmap(diarioAzul.x, diarioAzul.y,diarioAzul.image->width, diarioAzul.image->height, diarioAzul.image->data);
+	
+	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
+	ili9488_draw_filled_rectangle(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,diarioAzul.x + diarioAzul.size+40,diarioAzul.y+diarioAzul.size+40);
+	
+	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
+	//ili9488_draw_string(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,"Ciclo Diario" );
+	font_draw_text(&calibri_24, "Diario", diarioAzul.x, diarioAzul.y + diarioAzul.size + 20, 1);
+	ili9488_draw_pixmap(bLocked.x, bLocked.y, bLocked.image->width, bLocked.image->height, bLocked.image->data);
+	
+
+	
+	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
+	draw_time(c_diario.enxagueTempo, c_diario.enxagueQnt, c_diario.centrifugacaoTempo);
+	isDrawn = true;
+	
+}
+
+void draw_started_screen(void){
+	
+	char b[512];
+	sprintf(b, "Tempo Restante: 00 : %02d", 20);
+	font_draw_text(&calibri_36, b, 50, 145, 3);
+	ili9488_draw_pixmap(bLocked.x, bLocked.y, bLocked.image->width, bLocked.image->height, bLocked.image->data);
+	ili9488_draw_pixmap(botaoStop.x, botaoStop.y,botaoStop.image->width, botaoStop.image->height, botaoStop.image->data);
+	printf("desenhou");
+	flag_started = 2;
+	isDrawn = true;
+}
+
+void draw_lock_screen(void){
+	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
+	ili9488_draw_filled_rectangle(0, 0, 500, 500);
+	ili9488_draw_pixmap(bUnlocked.x, bUnlocked.y, bUnlocked.image->width, bUnlocked.image->height, bUnlocked.image->data);
+	isDrawn = true;
+}
+
+void draw_door_screen(void){
+	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
+	ili9488_draw_filled_rectangle(0, 0, 500, 500);
+	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_RED));
+	font_draw_text(&calibri_36, "FECHE A PORTA", diarioAzul.x, diarioAzul.y + diarioAzul.size + 20, 1);
+	ili9488_draw_pixmap(botaoStop.x, botaoStop.y,botaoStop.image->width, botaoStop.image->height, botaoStop.image->data);
+	//pio_set(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
+	//delay_ms(60);
+	//pio_clear(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
+	isDrawn = true;
+}
+
+void draw_cicle(struct botao atual, t_ciclo selecionado){
+	ili9488_draw_pixmap(atual.x,
+	atual.y,
+	atual.image->width,
+	atual.image->height,
+	atual.image->data);
+	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
+	ili9488_draw_filled_rectangle(atual.x, atual.y + atual.size + 20, atual.x + atual.size + 40, atual.y + atual.size+40);
+	ili9488_draw_filled_rectangle(0, 0, 200, 40);
+	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
+	font_draw_text(&calibri_24, selecionado.nome, atual.x, atual.y + atual.size + 20, 1);
+	draw_time(selecionado.enxagueTempo, selecionado.enxagueQnt, selecionado.centrifugacaoTempo);
+}
+/************************************************************************/
+/* Main                                                                 */
+/************************************************************************/
 int main(void)
 {
 	struct mxt_device device; /* Device data container */
@@ -455,117 +627,29 @@ int main(void)
 		.paritytype   = USART_SERIAL_PARITY,
 		.stopbits     = USART_SERIAL_STOP_BIT
 	};
-	int tipo_lavagem = 0;
+	int tipo_lavagem = 5;
 
 	sysclk_init(); /* Initialize system clocks */
 	board_init();  /* Initialize board */
 	configure_lcd();
-	draw_screen();
+	//draw_menu_screen();
 	
 	//draw_button(0);
 	/* Initialize the mXT touch device */
 	mxt_init(&device);
 	
+	io_init();
+	
 	/* Initialize stdio on USART */
 	stdio_serial_init(USART_SERIAL_EXAMPLE, &usart_serial_options);
 
 	printf("\n\rmaXTouch data USART transmitter\n\r");
-		
-	/* -----------------------------------------------------*/
-
-	struct botao botaoNext = {.x=384-32,.y=170-32,.size=64,.p_handler = next_callback, .image = &next_colorido};
-	struct botao botaoBack = {.x=106-32,.y=170-32,.size=64,.p_handler = next_callback, .image = &back_colorido};
-
-
-	struct botao diarioAzul;
-	diarioAzul.x = 240 - 64;
-	diarioAzul.y = 130 - 64;
-	diarioAzul.size = 128;
-	diarioAzul.p_handler = next_callback;
-	diarioAzul.image = &diario_azul;
-	
-	struct botao centrifuga;
-	centrifuga.x = 240 - 64;
-	centrifuga.y = 130 - 64;
-	centrifuga.size = 128;
-	centrifuga.p_handler = next_callback;
-	centrifuga.image = &centrifuga_colorido;
-	
-	struct botao enxague;
-	enxague.x = 240 - 64;
-	enxague.y = 130 - 64;
-	enxague.size = 128;
-	enxague.p_handler = next_callback;
-	enxague.image = &enxague_colorido;
-	
-	struct botao fast;
-	fast.x = 240 - 64;
-	fast.y = 130 - 64;
-	fast.size = 128;
-	fast.p_handler = next_callback;
-	fast.image = &fast_colorido;
-	
-	struct botao pesado;
-	pesado.x = 240 - 64;
-	pesado.y = 130 - 64;
-	pesado.size = 128;
-	pesado.p_handler = next_callback;
-	pesado.image = &pesado_colorido;
-	
-	struct botao locked;
-	locked.x = 450 - 64;
-	locked.y = 300 - 64;
-	locked.size = 128;
-	locked.p_handler = next_callback;
-	locked.image = &locked_colorido;
-	
-	struct botao unlocked;
-	unlocked.x = 450 - 64;
-	unlocked.y = 300 - 64;
-	unlocked.size = 128;
-	unlocked.p_handler = lock_callback;
-	unlocked.image = &unlocked_colorido;
-
-	ili9488_draw_pixmap(botaoNext.x, 
-						botaoNext.y, 
-						botaoNext.image->width, 
-						botaoNext.image->height, 
-						botaoNext.image->data);
-						
-	ili9488_draw_pixmap(botaoBack.x,
-	botaoBack.y,
-	botaoBack.image->width,
-	botaoBack.image->height,
-	botaoBack.image->data);						
-
-	ili9488_draw_pixmap(diarioAzul.x,
-	diarioAzul.y,
-	diarioAzul.image->width,
-	diarioAzul.image->height,
-	diarioAzul.image->data);
-	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
-	ili9488_draw_filled_rectangle(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,diarioAzul.x + diarioAzul.size+40,diarioAzul.y+diarioAzul.size+40);
-	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
-	ili9488_draw_string(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,"Ciclo Diario" );
-
-	ili9488_draw_pixmap(locked.x,
-	locked.y,
-	locked.image->width,
-	locked.image->height,
-	locked.image->data);
-	
 
 	
-	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
-	
-
-	//draw_button(0);
-	draw_timer(c_rapido.enxagueTempo,c_rapido.enxagueQnt,c_rapido.centrifugacaoTempo);
-	
-	struct botao botoes[] = {botaoNext, botaoBack};
-	/* -----------------------------------------------------*/
+	struct botao botoes[] = {bLocked, botaoStart, botaoBack, botaoNext};
 
 	while (true) {
+		//printf(" FLAGe :%d   ", flag_started);
 		/* Check for any pending messages and run message handler if any
 		 * message is found in the queue */
 		if (mxt_is_message_pending(&device)) {
@@ -573,96 +657,78 @@ int main(void)
 			delay_ms(500);
 			mxt_debounce(&device, botoes, 1);
 		}
-		if(flag_next == true || flag_back == true){
-			if(flag_next == true){
-				tipo_lavagem += 1;
+		if(locked){
+			printf("LOCKED");
+			struct botao botoes[] = {bLocked};
+			if(!isDrawn){
+				draw_lock_screen();
 			}
-			else if(flag_back == true){
-				tipo_lavagem -= 1;
-			}
-
-			if (tipo_lavagem%5 == 0 ){
-					//ili9488_draw_filled_rectangle(240-64,130-64,240+64,130+64);
-					ili9488_draw_pixmap(diarioAzul.x,
-					diarioAzul.y,
-					diarioAzul.image->width,
-					diarioAzul.image->height,
-					diarioAzul.image->data);
-					ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
-					ili9488_draw_filled_rectangle(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,diarioAzul.x + diarioAzul.size+40,diarioAzul.y+diarioAzul.size+40);
-					ili9488_draw_filled_rectangle(0,0,200,40);
-					ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
-					ili9488_draw_string(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,"Ciclo Diario" );	
-					draw_timer(c_diario.enxagueTempo,c_diario.enxagueQnt,c_diario.centrifugacaoTempo);
-
 		}
-			if (tipo_lavagem%5 == 1 ){
-			//	ili9488_draw_filled_rectangle(240-64,130-64,240+64,130+64);
-				ili9488_draw_pixmap(centrifuga.x,
-				centrifuga.y,
-				centrifuga.image->width,
-				centrifuga.image->height,
-				centrifuga.image->data);
-				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
-				ili9488_draw_filled_rectangle(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,diarioAzul.x + diarioAzul.size+40,diarioAzul.y+diarioAzul.size+40);
-				ili9488_draw_filled_rectangle(0,0,200,40);
-				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
-				ili9488_draw_string(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,"Centrifuga" );
-					draw_timer(c_centrifuga.enxagueTempo,c_centrifuga.enxagueQnt,c_centrifuga.centrifugacaoTempo);
-
-
-			}
-			if (tipo_lavagem%5 == 2 ){
-				//ili9488_draw_filled_rectangle(240-64,130-64,240+64,130+64);
-				ili9488_draw_pixmap(enxague.x,
-				enxague.y,
-				enxague.image->width,
-				enxague.image->height,
-				enxague.image->data);
-				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
-				ili9488_draw_filled_rectangle(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,diarioAzul.x + diarioAzul.size+40,diarioAzul.y+diarioAzul.size+40);
-				ili9488_draw_filled_rectangle(0,0,200,40);				
-				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));				
-				ili9488_draw_string(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,"Enxague" );
-					draw_timer(c_enxague.enxagueTempo,c_enxague.enxagueQnt,c_enxague.centrifugacaoTempo);
-
-
-			}
-			if (tipo_lavagem%5 == 3 ){
-				//ili9488_draw_filled_rectangle(240-64,130-64,240+64,130+64);
-				ili9488_draw_pixmap(fast.x,
-				fast.y,
-				fast.image->width,
-				fast.image->height,
-				fast.image->data);
-				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
-				ili9488_draw_filled_rectangle(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,diarioAzul.x + diarioAzul.size+40,diarioAzul.y+diarioAzul.size+40);
-				ili9488_draw_filled_rectangle(0,0,200,40);				
-				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));				
-				ili9488_draw_string(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,"Ciclo Rapido" );
-					draw_timer(c_rapido.enxagueTempo,c_rapido.enxagueQnt,c_rapido.centrifugacaoTempo);
-
+		
+		if(flag_button){
+			if(isOpen){
+				isOpen = false;
 				
+				pio_clear(LED_PIO, LED_PIO_IDX_MASK);
+				printf("PORTA FECHADA");
 			}
-			if (tipo_lavagem%5 == 4 ){
-				//ili9488_draw_filled_rectangle(240-64,130-64,240+64,130+64);
-				ili9488_draw_pixmap(pesado.x,
-				pesado.y,
-				pesado.image->width,
-				pesado.image->height,
-				pesado.image->data);
+			else{
+				isOpen = true;
+				pio_set(LED_PIO, LED_PIO_IDX_MASK);
+				printf("PORTA ABERTA");
+			}
+			flag_button = false;
+			isDrawn = false;
+		}
+		
+		if(flag_started == 0){
+			if(!isDrawn){
 				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
-				ili9488_draw_filled_rectangle(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,diarioAzul.x + diarioAzul.size+40,diarioAzul.y+diarioAzul.size+40);
-				ili9488_draw_filled_rectangle(0,0,200,40);
-				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
-				ili9488_draw_string(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,"Ciclo Pesado" );
-					draw_timer(c_pesado.enxagueTempo,c_pesado.enxagueQnt,c_pesado.centrifugacaoTempo);
-
-				
+				ili9488_draw_filled_rectangle(0, 0, 500, 500);
+				draw_menu_screen();
 			}
-		flag_next = false;
-		flag_back = false;
-	}
+			struct botao botoes[] = {botaoNext, botaoStart, botaoBack};
+			if(flag_next == true || flag_back == true){
+				
+				if(flag_next == true){
+					tipo_lavagem += 1;
+				}
+				else if(flag_back == true){
+					tipo_lavagem -= 1;
+				}
+				if (tipo_lavagem%5 == 0 ){
+					draw_cicle(diarioAzul, c_diario);
+				}
+				if (tipo_lavagem%5 == 1 ){
+					draw_cicle(pesado, c_pesado);
+				}
+				if (tipo_lavagem%5 == 2 ){
+					draw_cicle(enxague, c_enxague);
+				}
+				if (tipo_lavagem%5 == 3 ){
+					draw_cicle(centrifuga, c_centrifuga);
+				}
+				if (tipo_lavagem%5 == 4 ){
+					draw_cicle(fast, c_rapido);
+				}
+				flag_next = false;
+				flag_back = false;
+			}
+		}
+		if(flag_started == 1 && isOpen == false){
+			struct botao botoes[] = {botaoStop};
+			printf("COMECOU");
+			if(!isDrawn){
+				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
+				ili9488_draw_filled_rectangle(0, 0, 500, 500);
+				draw_started_screen();
+			}
+		}
+		else if(flag_started == 1 && isOpen == true){
+			if(!isDrawn){
+				draw_door_screen();
+			}
+		}
 	}
 
 	return 0;

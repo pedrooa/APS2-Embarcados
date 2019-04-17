@@ -5,7 +5,8 @@
  *  Author: eduardo
  */ 
 
-
+#include <stdlib.h>
+#include <stdio.h>
 #ifndef TFONT_H_
 #define TFONT_H_
 
