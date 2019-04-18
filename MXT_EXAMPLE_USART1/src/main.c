@@ -256,14 +256,13 @@ struct botao botaoStop	= {.x=240-32,.y=280-32,.size=64,.p_handler = start_callba
 /************************************************************************/
 /* funcoes                                                              */
 /************************************************************************/
-int processa_touch(struct botao b[], struct botao *rtn, uint N ,uint x, uint y ){
+int processa_touch(struct botao b[], uint *rtn, uint N ,uint x, uint y ){
 	
 	for (int i = 0; i< N; i++){
 		printf("");
-		if(x >= (b[i].x) && x <= (b[i].x) +(b[i].size)){
-			
+		if(x >= (b[i].x) && x <= (b[i].x) +(b[i].size)){		
 			if(y >= (b[i].y) && y<= (b[i].y) + (b[i].size)) {
-				*rtn = b[i];
+				*rtn = i;
 				printf("foi");
 				//pio_set(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
 				//delay_ms(60);
@@ -438,6 +437,7 @@ void mxt_handler(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
 	/* USART tx buffer initialized to 0 */
 	char tx_buf[STRING_LENGTH * MAX_ENTRIES] = {0};
 	uint8_t i = 0; /* Iterator */
+	int last_status;
 
 	/* Temporary touch event data struct */
 	struct mxt_touch_event touch_event;
@@ -463,50 +463,20 @@ void mxt_handler(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
 		
 		/* Format a new entry in the data string that will be sent over USART */
 		sprintf(buf, "X:%3d Y:%3d \n", conv_x, conv_y);
-		//update_screen(conv_x, conv_y);
-		/* -----------------------------------------------------*/
-		struct botao bAtual;
-		if(processa_touch(botoes, &bAtual, Nbotoes, conv_x, conv_y))
-			bAtual.p_handler();
+		last_status = touch_event.status;
 		
-		/* -----------------------------------------------------*/
+		if(last_status<60){
+			//update_screen(conv_x, conv_y);
+			uint i;
+			if(processa_touch(botoes, &i, Nbotoes, conv_x, conv_y))
+			botoes[i].p_handler();
+		}
 
 		/* Add the new string to the string buffer */
 		strcat(tx_buf, buf);
 		i++;
 		
 		break;
-
-		/* Check if there is still messages in the queue and
-		 * if we have reached the maximum numbers of events */
-	} while ((mxt_is_message_pending(device)) & (i < MAX_ENTRIES));
-
-	/* If there is any entries in the buffer, send them over USART */
-	if (i > 0) {
-		usart_serial_write_packet(USART_SERIAL_EXAMPLE, (uint8_t *)tx_buf, strlen(tx_buf));
-	}
-}
-
-void mxt_debounce(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
-{
-	/* USART tx buffer initialized to 0 */
-	char tx_buf[STRING_LENGTH * MAX_ENTRIES] = {0};
-	uint8_t i = 0; /* Iterator */
-
-	/* Temporary touch event data struct */
-	struct mxt_touch_event touch_event;
-
-	/* Collect touch events and put the data in a string,
-	 * maximum 2 events at the time */
-	do {
-		/* Temporary buffer for each new touch event line */
-		char buf[STRING_LENGTH];
-	
-		/* Read next next touch event in the queue, discard if read fails */
-		if (mxt_read_touch_event(device, &touch_event) != STATUS_OK) {
-			continue;
-		}	
-		i++;
 
 		/* Check if there is still messages in the queue and
 		 * if we have reached the maximum numbers of events */
@@ -653,13 +623,10 @@ int main(void)
 		/* Check for any pending messages and run message handler if any
 		 * message is found in the queue */
 		if (mxt_is_message_pending(&device)) {
-			mxt_handler(&device, botoes, 2);
-			delay_ms(500);
-			mxt_debounce(&device, botoes, 1);
+			mxt_handler(&device, botoes,  sizeof(botoes) / sizeof(struct botao));
 		}
 		if(locked){
 			printf("LOCKED");
-			struct botao botoes[] = {bLocked};
 			if(!isDrawn){
 				draw_lock_screen();
 			}
@@ -687,7 +654,6 @@ int main(void)
 				ili9488_draw_filled_rectangle(0, 0, 500, 500);
 				draw_menu_screen();
 			}
-			struct botao botoes[] = {botaoNext, botaoStart, botaoBack};
 			if(flag_next == true || flag_back == true){
 				
 				if(flag_next == true){
@@ -716,7 +682,6 @@ int main(void)
 			}
 		}
 		if(flag_started == 1 && isOpen == false){
-			struct botao botoes[] = {botaoStop};
 			printf("COMECOU");
 			if(!isDrawn){
 				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
