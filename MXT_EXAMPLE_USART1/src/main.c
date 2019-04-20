@@ -169,7 +169,7 @@
  *  ou ser atualizado pelo PC.
  */
 #define YEAR        2018
-#define MOUNT       3
+#define MOUNTH       3
 #define DAY         19
 #define WEEK        12
 #define HOUR        15
@@ -199,7 +199,7 @@ volatile Bool isOpen = false;
 volatile Bool isDrawn = false;
 volatile Bool flag_button = false;
 volatile int flag_started = 0;
-
+volatile Bool flag_rtc_alarme = false;
 /** \brief Touch event struct */
 struct botao {
 	uint16_t x;
@@ -238,7 +238,33 @@ void start_callback(void){
 	isDrawn = false;
 	printf("   artFLAG EH :%d   ", flag_started);
 }
+void RTC_Handler(void)
+{
+	uint32_t ul_status = rtc_get_status(RTC);
 
+	/*
+	*  Verifica por qual motivo entrou
+	*  na interrupcao, se foi por segundo
+	*  ou Alarm
+	*/
+	if ((ul_status & RTC_SR_SEC) == RTC_SR_SEC) {
+		rtc_clear_status(RTC, RTC_SCCR_SECCLR);
+					flag_rtc_alarme = true;
+
+	}
+	
+	/* Time or date alarm */
+	if ((ul_status & RTC_SR_ALARM) == RTC_SR_ALARM) {
+			rtc_clear_status(RTC, RTC_SCCR_ALRCLR);
+
+	}
+	
+	rtc_clear_status(RTC, RTC_SCCR_ACKCLR);
+	rtc_clear_status(RTC, RTC_SCCR_TIMCLR);
+	rtc_clear_status(RTC, RTC_SCCR_CALCLR);
+	rtc_clear_status(RTC, RTC_SCCR_TDERRCLR);
+	
+}
 
 
 struct botao botaoNext  = {.x=384-32,.y=160-32,.size=64,.p_handler = next_callback, .image = &next_colorido};
@@ -276,6 +302,9 @@ int processa_touch(struct botao b[], uint *rtn, uint N ,uint x, uint y ){
 
 }
 
+int calcula_tempo(t_ciclo ciclo) {
+	return ciclo.enxagueQnt*ciclo.enxagueTempo + ciclo.centrifugacaoTempo;
+}
 
 void font_draw_text(tFont *font, const char *text, int x, int y, int spacing) {
 	char *p = text;
@@ -387,9 +416,9 @@ static void mxt_init(struct mxt_device *device)
 }
 
 
-void draw_time(int enxagueQnt, int enxagueTempo, int centrifugacaoTempo){
+void draw_time(t_ciclo ciclo){
 		char b[512];
-		int Tempo_ciclo = enxagueQnt * enxagueTempo + centrifugacaoTempo; // Minutos
+		int Tempo_ciclo = ciclo.enxagueQnt * ciclo.enxagueTempo + ciclo.centrifugacaoTempo; // Minutos
 		sprintf(b, "Tempo: 00 : %02d", Tempo_ciclo);
 		font_draw_text(&calibri_24, b, 12, 12, 1);
 }
@@ -514,6 +543,34 @@ void io_init(void){
 	NVIC_SetPriority(PORTA_PIO_ID, 4); // Prioridade 4
 }
 
+
+/**
+* Configura o RTC para funcionar com interrupcao de alarme
+*/
+void RTC_init(){
+	/* Configura o PMC */
+	pmc_enable_periph_clk(ID_RTC);
+
+	/* Default RTC configuration, 24-hour mode */
+	rtc_set_hour_mode(RTC, 0);
+
+	/* Configura data e hora manualmente */
+	rtc_set_date(RTC, YEAR, MOUNTH, DAY, WEEK);
+	rtc_set_time(RTC, HOUR, MINUTE, SECOND);
+
+	/* Configure RTC interrupts */
+	NVIC_DisableIRQ(RTC_IRQn);
+	NVIC_ClearPendingIRQ(RTC_IRQn);
+	NVIC_SetPriority(RTC_IRQn, 0);
+	NVIC_EnableIRQ(RTC_IRQn);
+
+	/* Ativa interrupcao via alarme */
+	rtc_enable_interrupt(RTC,  RTC_IER_SECEN);
+	
+
+
+}
+
 void draw_menu_screen(void) {
 	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
 	ili9488_draw_filled_rectangle(0, 0, ILI9488_LCD_WIDTH-1, ILI9488_LCD_HEIGHT-1);
@@ -534,16 +591,17 @@ void draw_menu_screen(void) {
 
 	
 	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
-	draw_time(c_diario.enxagueTempo, c_diario.enxagueQnt, c_diario.centrifugacaoTempo);
+	draw_time(c_diario);
 	isDrawn = true;
 	
 }
 
 void draw_started_screen(void){
 	
+/*
 	char b[512];
 	sprintf(b, "Tempo Restante: 00 : %02d", 20);
-	font_draw_text(&calibri_36, b, 50, 145, 3);
+	font_draw_text(&calibri_36, b, 50, 145, 3);*/
 	ili9488_draw_pixmap(bLocked.x, bLocked.y, bLocked.image->width, bLocked.image->height, bLocked.image->data);
 	ili9488_draw_pixmap(botaoStop.x, botaoStop.y,botaoStop.image->width, botaoStop.image->height, botaoStop.image->data);
 	printf("desenhou");
@@ -581,7 +639,7 @@ void draw_cicle(struct botao atual, t_ciclo selecionado){
 	ili9488_draw_filled_rectangle(0, 0, 200, 40);
 	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
 	font_draw_text(&calibri_24, selecionado.nome, atual.x, atual.y + atual.size + 20, 1);
-	draw_time(selecionado.enxagueTempo, selecionado.enxagueQnt, selecionado.centrifugacaoTempo);
+	draw_time(selecionado);
 }
 /************************************************************************/
 /* Main                                                                 */
@@ -597,11 +655,14 @@ int main(void)
 		.paritytype   = USART_SERIAL_PARITY,
 		.stopbits     = USART_SERIAL_STOP_BIT
 	};
+	int tempo_total = calcula_tempo(c_diario);
 	int tipo_lavagem = 5;
+	char b[512];
 
 	sysclk_init(); /* Initialize system clocks */
 	board_init();  /* Initialize board */
 	configure_lcd();
+	RTC_init();
 	//draw_menu_screen();
 	
 	//draw_button(0);
@@ -664,18 +725,28 @@ int main(void)
 				}
 				if (tipo_lavagem%5 == 0 ){
 					draw_cicle(diarioAzul, c_diario);
+					tempo_total = calcula_tempo(c_diario);
+					
 				}
 				if (tipo_lavagem%5 == 1 ){
 					draw_cicle(pesado, c_pesado);
+					tempo_total = calcula_tempo(c_pesado);
+					
 				}
 				if (tipo_lavagem%5 == 2 ){
 					draw_cicle(enxague, c_enxague);
+					tempo_total = calcula_tempo(c_enxague);				
+					
 				}
 				if (tipo_lavagem%5 == 3 ){
 					draw_cicle(centrifuga, c_centrifuga);
+					tempo_total = calcula_tempo(c_centrifuga);				
+					
 				}
 				if (tipo_lavagem%5 == 4 ){
 					draw_cicle(fast, c_rapido);
+					tempo_total = calcula_tempo(c_rapido);					
+					
 				}
 				flag_next = false;
 				flag_back = false;
@@ -686,7 +757,24 @@ int main(void)
 			if(!isDrawn){
 				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
 				ili9488_draw_filled_rectangle(0, 0, 500, 500);
+				int hora, min, sec;
+				rtc_get_time(RTC, &hora, &min, &sec);
+				rtc_set_time_alarm(RTC, 1, hora, 1, min+1,1, sec);
+				char b[512];
+				sprintf(b, "Tempo restante: 00 : %02d", tempo_total);
+				font_draw_text(&calibri_24, b, 12, 12, 1);
 				draw_started_screen();
+				
+			}
+			if (flag_rtc_alarme){
+				tempo_total -= 1;
+				int hora, min, sec;
+				rtc_get_time(RTC, &hora, &min, &sec);
+				rtc_set_time_alarm(RTC, 1, hora, 1, min+1,1, sec);
+				char b[512];
+				sprintf(b, "Tempo restante: 00 : %02d", tempo_total);
+				font_draw_text(&calibri_24, b, 12, 12, 1);
+				flag_rtc_alarme = false;
 			}
 		}
 		else if(flag_started == 1 && isOpen == true){
