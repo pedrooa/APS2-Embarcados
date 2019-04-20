@@ -92,9 +92,9 @@
 * - TODO [x] Colocar fonte nos textos
 * - TODO [ ] Cronometro do fim da lavagem
 * - TODO [ ] Animacao do tempo de carregamento
-* - TODO [ ] FAZER MAIS DE DOIS BOTOES FUNCIONAREM NA LISTA
-* - TODO [ ] BOTOES AINDA ESTAO COM TOQUE DUPLO
-* - TODO [ ] DESCOMENTAR A ATIVACAO DO BUZZER(JA FOI IMPLEMENTADO)
+* - TODO [x] FAZER MAIS DE DOIS BOTOES FUNCIONAREM NA LISTA
+* - TODO [x] BOTOES AINDA ESTAO COM TOQUE DUPLO
+* - TODO [x] DESCOMENTAR A ATIVACAO DO BUZZER(JA FOI IMPLEMENTADO)
 */
 /************************************************************************/
 /* includes                                                             */
@@ -200,6 +200,9 @@ volatile Bool isDrawn = false;
 volatile Bool flag_button = false;
 volatile int flag_started = 0;
 volatile Bool flag_rtc_alarme = false;
+
+int touch_counter = 0;
+
 /** \brief Touch event struct */
 struct botao {
 	uint16_t x;
@@ -215,13 +218,9 @@ struct botao {
 /* handler / callbacks                                                  */
 /************************************************************************/
 void back_callback(void){
-	printf("NEXT  ");
-	printf("%d  ",flag_started );
 	flag_back = true;
 }
 void next_callback(void){
-	printf("BACK  ");
-	printf("%d  ",flag_started );
 	flag_next = true;
 }
 
@@ -236,7 +235,6 @@ void PORTA_callback(void){
 void start_callback(void){
 	flag_started = !flag_started;
 	isDrawn = false;
-	printf("   artFLAG EH :%d   ", flag_started);
 }
 void RTC_Handler(void)
 {
@@ -275,8 +273,8 @@ struct botao centrifuga	= {.x=240-64,.y=120-64,.size=128,.p_handler = next_callb
 struct botao enxague	= {.x=240-64,.y=120-64,.size=128,.p_handler = next_callback, .image = &enxague_colorido};
 struct botao fast		= {.x=240-64,.y=120-64,.size=128,.p_handler = next_callback, .image = &fast_colorido};
 struct botao pesado		= {.x=240-64,.y=120-64,.size=128,.p_handler = next_callback, .image = &pesado_colorido};
-struct botao bLocked	= {.x=450-64,.y=305-64,.size=128,.p_handler = lock_callback, .image = &unlocked_colorido};
-struct botao bUnlocked	= {.x=450-64,.y=305-64,.size=128,.p_handler = lock_callback, .image = &locked_colorido};
+struct botao bLocked	= {.x=380-64,.y=305-64,.size=64,.p_handler = lock_callback, .image = &unlocked_colorido};
+struct botao bUnlocked	= {.x=475-64,.y=305-64,.size=64,.p_handler = lock_callback, .image = &locked_colorido};
 struct botao botaoStop	= {.x=240-32,.y=280-32,.size=64,.p_handler = start_callback, .image = &stop};
 
 /************************************************************************/
@@ -285,19 +283,18 @@ struct botao botaoStop	= {.x=240-32,.y=280-32,.size=64,.p_handler = start_callba
 int processa_touch(struct botao b[], uint *rtn, uint N ,uint x, uint y ){
 	
 	for (int i = 0; i< N; i++){
-		printf("");
 		if(x >= (b[i].x) && x <= (b[i].x) +(b[i].size)){		
 			if(y >= (b[i].y) && y<= (b[i].y) + (b[i].size)) {
 				*rtn = i;
-				printf("foi");
-				//pio_set(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
-				//delay_ms(60);
-				//pio_clear(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
+				printf(" foi ");
+				pio_set(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
+				delay_ms(20);
+				pio_clear(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
 				return 1;
 			}
 		}
 	}
-	printf("Nao foi");
+	printf(" Nao foi ");
 	return 0;
 
 }
@@ -422,6 +419,7 @@ void draw_time(t_ciclo ciclo){
 		sprintf(b, "Tempo: 00 : %02d", Tempo_ciclo);
 		font_draw_text(&calibri_24, b, 12, 12, 1);
 }
+
 void draw_button(uint32_t clicked) {
 	static uint32_t last_state = 255; // undefined
 	if(clicked == last_state) return;
@@ -452,12 +450,41 @@ uint32_t convert_axis_system_y(uint32_t touch_x) {
 void update_screen(uint32_t tx, uint32_t ty) {
 	if(tx >= BUTTON_X-BUTTON_W/2 && tx <= BUTTON_X + BUTTON_W/2) {
 		if(ty > BUTTON_Y && ty <= BUTTON_Y+BUTTON_H/2) {
-			printf("Entrou 1");
 			draw_button(1);
 		} else if(ty > BUTTON_Y && ty < BUTTON_Y + BUTTON_H/2) {
-			printf("Entrou 0");
 			draw_button(0);
 		}
+	}
+}
+
+void mxt_debounce(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
+{
+	/* USART tx buffer initialized to 0 */
+	char tx_buf[STRING_LENGTH * MAX_ENTRIES] = {0};
+	uint8_t i = 0; /* Iterator */
+
+	/* Temporary touch event data struct */
+	struct mxt_touch_event touch_event;
+
+	/* Collect touch events and put the data in a string,
+	 * maximum 2 events at the time */
+	do {
+		/* Temporary buffer for each new touch event line */
+		char buf[STRING_LENGTH];
+	
+		/* Read next next touch event in the queue, discard if read fails */
+		if (mxt_read_touch_event(device, &touch_event) != STATUS_OK) {
+			continue;
+		}	
+		i++;
+
+		/* Check if there is still messages in the queue and
+		 * if we have reached the maximum numbers of events */
+	} while ((mxt_is_message_pending(device)) & (i < MAX_ENTRIES));
+
+	/* If there is any entries in the buffer, send them over USART */
+	if (i > 0) {
+		usart_serial_write_packet(USART_SERIAL_EXAMPLE, (uint8_t *)tx_buf, strlen(tx_buf));
 	}
 }
 
@@ -493,12 +520,37 @@ void mxt_handler(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
 		/* Format a new entry in the data string that will be sent over USART */
 		sprintf(buf, "X:%3d Y:%3d \n", conv_x, conv_y);
 		last_status = touch_event.status;
+		printf("||     STATUS: %d      ||", touch_event.status);
 		
 		if(last_status<60){
-			//update_screen(conv_x, conv_y);
 			uint i;
-			if(processa_touch(botoes, &i, Nbotoes, conv_x, conv_y))
-			botoes[i].p_handler();
+			if(!locked){
+				if(processa_touch(botoes, &i, Nbotoes, conv_x, conv_y))
+				if(i != 2){
+					botoes[i].p_handler();
+				}
+			}
+/*
+			else{
+				//se a tela estiver travada unico botao funcional sera o bLocked que tem index 0.
+				if(processa_touch(botoes, &i, 1, conv_x, conv_y))
+				botoes[i].p_handler();
+			}*/
+		}
+		else if(touch_event.status == 144 && locked){
+			if(processa_touch(botoes, &i, Nbotoes, conv_x, conv_y)){
+				if(i == 2){
+					printf(";;    touch_counter: %d      ;;", touch_counter);
+					touch_counter ++;
+				}
+
+			}
+			if(touch_counter >= 20){
+				touch_counter = 0;
+				botoes[i].p_handler();
+				//funcao de debounce
+				mxt_debounce(device, botoes, 1);
+			}
 		}
 
 		/* Add the new string to the string buffer */
@@ -516,6 +568,8 @@ void mxt_handler(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
 		usart_serial_write_packet(USART_SERIAL_EXAMPLE, (uint8_t *)tx_buf, strlen(tx_buf));
 	}
 }
+
+
 
 void io_init(void){
 	// Inicializa clock do periférico PIO responsavel pelo botao
@@ -604,7 +658,7 @@ void draw_started_screen(void){
 	font_draw_text(&calibri_36, b, 50, 145, 3);*/
 	ili9488_draw_pixmap(bLocked.x, bLocked.y, bLocked.image->width, bLocked.image->height, bLocked.image->data);
 	ili9488_draw_pixmap(botaoStop.x, botaoStop.y,botaoStop.image->width, botaoStop.image->height, botaoStop.image->data);
-	printf("desenhou");
+	//printf("desenhou");
 	flag_started = 2;
 	isDrawn = true;
 }
@@ -613,6 +667,7 @@ void draw_lock_screen(void){
 	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
 	ili9488_draw_filled_rectangle(0, 0, 500, 500);
 	ili9488_draw_pixmap(bUnlocked.x, bUnlocked.y, bUnlocked.image->width, bUnlocked.image->height, bUnlocked.image->data);
+	font_draw_text(&calibri_36, "TELA TRAVADA", 50, 145, 3);
 	isDrawn = true;
 }
 
@@ -620,8 +675,9 @@ void draw_door_screen(void){
 	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
 	ili9488_draw_filled_rectangle(0, 0, 500, 500);
 	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_RED));
-	font_draw_text(&calibri_36, "FECHE A PORTA", diarioAzul.x, diarioAzul.y + diarioAzul.size + 20, 1);
+	font_draw_text(&calibri_36, "FECHE A PORTA", 50, 145, 3);
 	ili9488_draw_pixmap(botaoStop.x, botaoStop.y,botaoStop.image->width, botaoStop.image->height, botaoStop.image->data);
+	ili9488_draw_pixmap(bLocked.x, bLocked.y, bLocked.image->width, bLocked.image->height, bLocked.image->data);
 	//pio_set(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
 	//delay_ms(60);
 	//pio_clear(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
@@ -656,8 +712,9 @@ int main(void)
 		.stopbits     = USART_SERIAL_STOP_BIT
 	};
 	int tempo_total = calcula_tempo(c_diario);
-	int tipo_lavagem = 5;
 	char b[512];
+
+	int tipo_lavagem = 1000;
 
 	sysclk_init(); /* Initialize system clocks */
 	board_init();  /* Initialize board */
@@ -677,7 +734,7 @@ int main(void)
 	printf("\n\rmaXTouch data USART transmitter\n\r");
 
 	
-	struct botao botoes[] = {bLocked, botaoStart, botaoBack, botaoNext};
+	struct botao botoes[] = {bLocked, botaoStart, bUnlocked, botaoNext, botaoBack};
 
 	while (true) {
 		//printf(" FLAGe :%d   ", flag_started);
@@ -687,26 +744,32 @@ int main(void)
 			mxt_handler(&device, botoes,  sizeof(botoes) / sizeof(struct botao));
 		}
 		if(locked){
-			printf("LOCKED");
+			//printf("LOCKED");
 			if(!isDrawn){
 				draw_lock_screen();
 			}
 		}
 		
 		if(flag_button){
-			if(isOpen){
-				isOpen = false;
+			if(flag_started == 0){ //so abre a porta se a maquina nao estiver funcionando 
+				if(isOpen){
+					isOpen = false;
+					
+					pio_clear(LED_PIO, LED_PIO_IDX_MASK);
+					//printf("PORTA FECHADA");
+				}
+				else{
+					isOpen = true;
+					pio_set(LED_PIO, LED_PIO_IDX_MASK);
+					//printf("PORTA ABERTA");
+				}
+				flag_button = false;
+				if(!locked){
+					isDrawn = false;
+				}
 				
-				pio_clear(LED_PIO, LED_PIO_IDX_MASK);
-				printf("PORTA FECHADA");
 			}
-			else{
-				isOpen = true;
-				pio_set(LED_PIO, LED_PIO_IDX_MASK);
-				printf("PORTA ABERTA");
-			}
-			flag_button = false;
-			isDrawn = false;
+
 		}
 		
 		if(flag_started == 0){
@@ -753,7 +816,7 @@ int main(void)
 			}
 		}
 		if(flag_started == 1 && isOpen == false){
-			printf("COMECOU");
+			//printf("COMECOU");
 			if(!isDrawn){
 				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
 				ili9488_draw_filled_rectangle(0, 0, 500, 500);
