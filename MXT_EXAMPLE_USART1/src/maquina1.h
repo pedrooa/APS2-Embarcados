@@ -16,10 +16,10 @@ struct ciclo{
 };
 
 t_ciclo c_rapido = {.nome = "Rapido",
-                    .enxagueTempo = 5,
-                    .enxagueQnt = 3,
+                    .enxagueTempo = 1,//5
+                    .enxagueQnt = 1, //3
                     .centrifugacaoRPM = 900,
-                    .centrifugacaoTempo = 5,
+                    .centrifugacaoTempo = 0, // 5
                     .heavy = 0,
                     .bubblesOn = 1
                   };

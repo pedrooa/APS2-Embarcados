@@ -200,6 +200,7 @@ volatile Bool isDrawn = false;
 volatile Bool flag_button = false;
 volatile int flag_started = 0;
 volatile Bool flag_rtc_alarme = false;
+volatile Bool flag_END = false;
 
 int touch_counter = 0;
 
@@ -247,13 +248,15 @@ void RTC_Handler(void)
 	*/
 	if ((ul_status & RTC_SR_SEC) == RTC_SR_SEC) {
 		rtc_clear_status(RTC, RTC_SCCR_SECCLR);
-					flag_rtc_alarme = true;
+					
 
 	}
 	
 	/* Time or date alarm */
 	if ((ul_status & RTC_SR_ALARM) == RTC_SR_ALARM) {
 			rtc_clear_status(RTC, RTC_SCCR_ALRCLR);
+			flag_rtc_alarme = true;
+			
 
 	}
 	
@@ -619,7 +622,7 @@ void RTC_init(){
 	NVIC_EnableIRQ(RTC_IRQn);
 
 	/* Ativa interrupcao via alarme */
-	rtc_enable_interrupt(RTC,  RTC_IER_SECEN);
+	rtc_enable_interrupt(RTC,  RTC_IER_ALREN);
 	
 
 
@@ -659,7 +662,7 @@ void draw_started_screen(void){
 	ili9488_draw_pixmap(bLocked.x, bLocked.y, bLocked.image->width, bLocked.image->height, bLocked.image->data);
 	ili9488_draw_pixmap(botaoStop.x, botaoStop.y,botaoStop.image->width, botaoStop.image->height, botaoStop.image->data);
 	//printf("desenhou");
-	flag_started = 2;
+	flag_started = 1;
 	isDrawn = true;
 }
 
@@ -776,6 +779,7 @@ int main(void)
 			if(!isDrawn){
 				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
 				ili9488_draw_filled_rectangle(0, 0, 500, 500);
+				tempo_total = calcula_tempo(c_diario);
 				draw_menu_screen();
 			}
 			if(flag_next == true || flag_back == true){
@@ -831,14 +835,30 @@ int main(void)
 			}
 			if (flag_rtc_alarme){
 				tempo_total -= 1;
-				int hora, min, sec;
-				rtc_get_time(RTC, &hora, &min, &sec);
-				rtc_set_time_alarm(RTC, 1, hora, 1, min+1,1, sec);
-				char b[512];
-				sprintf(b, "Tempo restante: 00 : %02d", tempo_total);
-				font_draw_text(&calibri_24, b, 12, 12, 1);
+				if(tempo_total == 0) {
+					pio_set(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
+					delay_ms(20);
+					pio_clear(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
+					flag_END = true;
+
+				}
+				else{
+					int hora, min, sec;
+					rtc_get_time(RTC, &hora, &min, &sec);
+					rtc_set_time_alarm(RTC, 1, hora, 1, min+1,1, sec);
+					char b[512];
+					sprintf(b, "Tempo restante: 00 : %02d", tempo_total);
+					font_draw_text(&calibri_24, b, 12, 12, 1);		
+				}
 				flag_rtc_alarme = false;
 			}
+			if(flag_END){
+				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
+				ili9488_draw_filled_rectangle(0, 0, 500, 200);
+				font_draw_text(&calibri_24, "Lavagem finalizada" ,130, ILI9488_LCD_HEIGHT/2, 1);	
+				flag_END = false;
+			}
+			
 		}
 		else if(flag_started == 1 && isOpen == true){
 			if(!isDrawn){
