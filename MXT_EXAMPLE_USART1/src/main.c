@@ -879,7 +879,7 @@ int main(void)
 				}
 				flag_rtc_alarme = false;
 			}
-			if(f_rtt_alarme & flag_animation_alarm){
+			if(f_rtt_alarme & flag_animation_alarm & locked){
 				// Gera uma interrupcao a cada 1 segundo
 				uint16_t pllPreScale = (int) (((float) 32768) / 2.0);
 				uint32_t irqRTTvalue  = 2;
