@@ -845,6 +845,7 @@ int main(void)
 			//printf("COMECOU");
 			if(!isDrawn){
 				f_rtt_alarme = true;
+				flag_animation_alarm = true;
 				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
 				ili9488_draw_filled_rectangle(0, 0, 500, 500);
 				int hora, min, sec;
@@ -878,7 +879,7 @@ int main(void)
 				}
 				flag_rtc_alarme = false;
 			}
-			if(f_rtt_alarme & !flag_END){
+			if(f_rtt_alarme & flag_animation_alarm){
 				// Gera uma interrupcao a cada 1 segundo
 				uint16_t pllPreScale = (int) (((float) 32768) / 2.0);
 				uint32_t irqRTTvalue  = 2;
@@ -911,6 +912,7 @@ int main(void)
 				pio_clear(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
 				delay_ms(500);
 				flag_END = false;
+				flag_animation_alarm = false;
 			}
 			
 		}
