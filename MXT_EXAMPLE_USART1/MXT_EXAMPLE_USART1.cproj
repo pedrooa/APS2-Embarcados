@@ -700,6 +700,18 @@
     <Compile Include="src\calibri_24.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\icones\load1.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\icones\load2.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\icones\load3.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\icones\load4.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\icones\stop.h">
       <SubType>compile</SubType>
     </Compile>

@@ -90,7 +90,7 @@
 * - TODO [x] Feedback sonoro dos botoes com Buzzer
 * - TODO [x] Implementar funcao da porta aberta
 * - TODO [x] Colocar fonte nos textos
-* - TODO [ ] Cronometro do fim da lavagem
+* - TODO [x] Cronometro do fim da lavagem
 * - TODO [ ] Animacao do tempo de carregamento
 * - TODO [x] FAZER MAIS DE DOIS BOTOES FUNCIONAREM NA LISTA
 * - TODO [x] BOTOES AINDA ESTAO COM TOQUE DUPLO
@@ -124,21 +124,12 @@
 #include "icones/unlocked_colorido.h"		//author: https://www.flaticon.com/authors/smashicons
 #include "icones/pesado_colorido.h"			//author: https://www.flaticon.com/authors/freepik
 #include "icones/fast2.h"					//author: https://www.flaticon.com/authors/smashicons
+#include "icones/load1.h"					//author: https://www.flaticon.com/authors/roundicons
+#include "icones/load2.h"					//author: https://www.flaticon.com/authors/roundicons
+#include "icones/load3.h"					//author: https://www.flaticon.com/authors/roundicons
+#include "icones/load4.h"					//author: https://www.flaticon.com/authors/roundicons
 #include "icones/stop.h"					//author: https://www.flaticon.com/authors/smashicons
-
-/************************************************************************/
-/* STRUCTS                                                              */
-/************************************************************************/
-
-/*
- typedef struct {
-	 const uint8_t *data;
-	 uint16_t width;
-	 uint16_t height;
-	 uint8_t dataSize;
- } tImage;
- */
-
+		
 
 /************************************************************************/
 /* DEFINES                                                              */
@@ -181,15 +172,14 @@
 #define STRING_LENGTH     70
 #define USART_TX_MAX_LENGTH     0xff
 
+#define icon_x 176
+#define icon_y 56
+
 /************************************************************************/
 /* variaveis globais                                                    */
 /************************************************************************/
 struct ili9488_opt_t g_ili9488_display_opt;
-const uint32_t BUTTON_W = 80;
-const uint32_t BUTTON_H = 60;
-const uint32_t BUTTON_BORDER = 2;
-const uint32_t BUTTON_X = 40; // BUTTON_W/2
-const uint32_t BUTTON_Y = 320-50;
+
 
 volatile Bool locked = false;
 volatile Bool flag_back = false;	
@@ -200,9 +190,12 @@ volatile Bool isDrawn = false;
 volatile Bool flag_button = false;
 volatile int flag_started = 0;
 volatile Bool flag_rtc_alarme = false;
+volatile Bool flag_animation_alarm = false;
+
 volatile Bool flag_END = false;
 
 int touch_counter = 0;
+int animation = 0;
 
 /** \brief Touch event struct */
 struct botao {
@@ -212,6 +205,13 @@ struct botao {
 	tImage *image;
 	void (*p_handler)(void);
 };	
+
+struct icone {
+	uint16_t x;
+	uint16_t y;
+	uint16_t size;
+	tImage *image;
+};
 
 
 
@@ -267,18 +267,26 @@ void RTC_Handler(void)
 	
 }
 
+/************************************************************************/
+/* STRUCTS                                                              */
+/************************************************************************/
 
 struct botao botaoNext  = {.x=384-32,.y=160-32,.size=64,.p_handler = next_callback, .image = &next_colorido};
 struct botao botaoBack  = {.x=106-32,.y=160-32,.size=64,.p_handler = back_callback, .image = &back_colorido};
 struct botao botaoStart = {.x=240-32,.y=280-32,.size=64,.p_handler = start_callback, .image = &fast2};
-struct botao diarioAzul = {.x=240-64,.y=120-64,.size=128,.p_handler = next_callback, .image = &diario_azul};
-struct botao centrifuga	= {.x=240-64,.y=120-64,.size=128,.p_handler = next_callback, .image = &centrifuga_colorido};
-struct botao enxague	= {.x=240-64,.y=120-64,.size=128,.p_handler = next_callback, .image = &enxague_colorido};
-struct botao fast		= {.x=240-64,.y=120-64,.size=128,.p_handler = next_callback, .image = &fast_colorido};
-struct botao pesado		= {.x=240-64,.y=120-64,.size=128,.p_handler = next_callback, .image = &pesado_colorido};
 struct botao bLocked	= {.x=380-64,.y=305-64,.size=64,.p_handler = lock_callback, .image = &unlocked_colorido};
 struct botao bUnlocked	= {.x=475-64,.y=305-64,.size=64,.p_handler = lock_callback, .image = &locked_colorido};
 struct botao botaoStop	= {.x=240-32,.y=280-32,.size=64,.p_handler = start_callback, .image = &stop};
+struct icone diarioAzul = {.x=icon_x,.y=icon_y,.size=128, .image = &diario_azul};
+struct icone centrifuga	= {.x=icon_x,.y=icon_y,.size=128, .image = &centrifuga_colorido};
+struct icone enxague	= {.x=icon_x,.y=icon_y,.size=128, .image = &enxague_colorido};
+struct icone fast		= {.x=icon_x,.y=icon_y,.size=128, .image = &fast_colorido};
+struct icone pesado		= {.x=icon_x,.y=icon_y,.size=128, .image = &pesado_colorido};
+struct icone loading1	= {.x=240-32,.y=icon_y+32,.size=64, .image = &load1};
+struct icone loading2	= {.x=240-32,.y=icon_y+32,.size=64, .image = &load2};
+struct icone loading3	= {.x=240-32,.y=icon_y+32,.size=64, .image = &load3};
+struct icone loading4	= {.x=240-32,.y=icon_y+32,.size=64, .image = &load4};
+
 
 /************************************************************************/
 /* funcoes                                                              */
@@ -423,22 +431,6 @@ void draw_time(t_ciclo ciclo){
 		font_draw_text(&calibri_24, b, 12, 12, 1);
 }
 
-void draw_button(uint32_t clicked) {
-	static uint32_t last_state = 255; // undefined
-	if(clicked == last_state) return;
-	
-	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
-	ili9488_draw_filled_rectangle(BUTTON_X-BUTTON_W/2, BUTTON_Y-BUTTON_H/2, BUTTON_X+BUTTON_W/2, BUTTON_Y+BUTTON_H/2);
-	if(clicked) {
-		ili9488_set_foreground_color(COLOR_CONVERT(COLOR_TOMATO));
-		ili9488_draw_filled_rectangle(BUTTON_X-BUTTON_W/2+BUTTON_BORDER, BUTTON_Y+BUTTON_BORDER, BUTTON_X+BUTTON_W/2-BUTTON_BORDER, BUTTON_Y+BUTTON_H/2-BUTTON_BORDER);
-	} else {
-		ili9488_set_foreground_color(COLOR_CONVERT(COLOR_GREEN));
-		ili9488_draw_filled_rectangle(BUTTON_X-BUTTON_W/2+BUTTON_BORDER, BUTTON_Y-BUTTON_H/2+BUTTON_BORDER, BUTTON_X+BUTTON_W/2-BUTTON_BORDER, BUTTON_Y-BUTTON_BORDER);
-	}
-	last_state = clicked;
-}
-
 uint32_t convert_axis_system_x(uint32_t touch_y) {
 	// entrada: 4096 - 0 (sistema de coordenadas atual)
 	// saida: 0 - 320
@@ -450,15 +442,6 @@ uint32_t convert_axis_system_y(uint32_t touch_x) {
 	return ILI9488_LCD_WIDTH - ILI9488_LCD_WIDTH*touch_x/4096;
 }
 
-void update_screen(uint32_t tx, uint32_t ty) {
-	if(tx >= BUTTON_X-BUTTON_W/2 && tx <= BUTTON_X + BUTTON_W/2) {
-		if(ty > BUTTON_Y && ty <= BUTTON_Y+BUTTON_H/2) {
-			draw_button(1);
-		} else if(ty > BUTTON_Y && ty < BUTTON_Y + BUTTON_H/2) {
-			draw_button(0);
-		}
-	}
-}
 
 void mxt_debounce(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
 {
@@ -655,13 +638,9 @@ void draw_menu_screen(void) {
 
 void draw_started_screen(void){
 	
-/*
-	char b[512];
-	sprintf(b, "Tempo Restante: 00 : %02d", 20);
-	font_draw_text(&calibri_36, b, 50, 145, 3);*/
 	ili9488_draw_pixmap(bLocked.x, bLocked.y, bLocked.image->width, bLocked.image->height, bLocked.image->data);
 	ili9488_draw_pixmap(botaoStop.x, botaoStop.y,botaoStop.image->width, botaoStop.image->height, botaoStop.image->data);
-	//printf("desenhou");
+	ili9488_draw_pixmap(loading1.x, loading1.y, loading1.image->width, loading1.image->height, loading1.image->data);
 	flag_started = 1;
 	isDrawn = true;
 }
@@ -687,7 +666,7 @@ void draw_door_screen(void){
 	isDrawn = true;
 }
 
-void draw_cicle(struct botao atual, t_ciclo selecionado){
+void draw_cicle(struct icone atual, t_ciclo selecionado){
 	ili9488_draw_pixmap(atual.x,
 	atual.y,
 	atual.image->width,
@@ -723,9 +702,7 @@ int main(void)
 	board_init();  /* Initialize board */
 	configure_lcd();
 	RTC_init();
-	//draw_menu_screen();
 	
-	//draw_button(0);
 	/* Initialize the mXT touch device */
 	mxt_init(&device);
 	
@@ -738,6 +715,7 @@ int main(void)
 
 	
 	struct botao botoes[] = {bLocked, botaoStart, bUnlocked, botaoNext, botaoBack};
+	struct icone load_icons[] = {loading1, loading2, loading3, loading4};
 
 	while (true) {
 		//printf(" FLAGe :%d   ", flag_started);
@@ -829,16 +807,18 @@ int main(void)
 				rtc_set_time_alarm(RTC, 1, hora, 1, min+1,1, sec);
 				char b[512];
 				sprintf(b, "Tempo restante: 00 : %02d", tempo_total);
-				font_draw_text(&calibri_24, b, 12, 12, 1);
+				font_draw_text(&calibri_36, b, 12, 12, 1);
 				draw_started_screen();
 				
 			}
 			if (flag_rtc_alarme){
 				tempo_total -= 1;
+				
 				if(tempo_total == 0) {
 					pio_set(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
 					delay_ms(20);
 					pio_clear(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
+					//animation = 0;
 					flag_END = true;
 
 				}
@@ -848,14 +828,32 @@ int main(void)
 					rtc_set_time_alarm(RTC, 1, hora, 1, min+1,1, sec);
 					char b[512];
 					sprintf(b, "Tempo restante: 00 : %02d", tempo_total);
-					font_draw_text(&calibri_24, b, 12, 12, 1);		
+					font_draw_text(&calibri_36, b, 12, 12, 1);
+					//ili9488_draw_pixmap(load_icons[animation].x, load_icons[animation].y, load_icons[animation].image->width, load_icons[animation].image->height, load_icons[animation].image->data);		
 				}
 				flag_rtc_alarme = false;
 			}
+/*
+			if(flag_animation_alarm){
+				animation++;
+				ili9488_draw_pixmap(load_icons[animation].x, load_icons[animation].y, load_icons[animation].image->width, load_icons[animation].image->height, load_icons[animation].image->data);
+			}*/
 			if(flag_END){
 				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
 				ili9488_draw_filled_rectangle(0, 0, 500, 200);
 				font_draw_text(&calibri_24, "Lavagem finalizada" ,130, ILI9488_LCD_HEIGHT/2, 1);	
+				pio_set(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
+				delay_s(1.4);
+				pio_clear(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
+				delay_ms(500);
+				pio_set(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
+				delay_s(1.4);
+				pio_clear(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
+				delay_ms(500);
+				pio_set(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
+				delay_s(1.4);
+				pio_clear(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
+				delay_ms(500);
 				flag_END = false;
 			}
 			
