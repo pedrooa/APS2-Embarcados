@@ -1,5 +1,5 @@
-src/ASF/sam/drivers/uart/uart.d src/ASF/sam/drivers/uart/uart.o: \
- ../src/ASF/sam/drivers/uart/uart.c ../src/ASF/sam/drivers/uart/uart.h \
+src/ASF/sam/drivers/rtt/rtt.d src/ASF/sam/drivers/rtt/rtt.o: \
+ ../src/ASF/sam/drivers/rtt/rtt.c ../src/ASF/sam/drivers/rtt/rtt.h \
  ../src/ASF/sam/utils/compiler.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\lib\gcc\arm-none-eabi\6.3.1\include\stddef.h \
  ../src/ASF/common/utils/parts.h \
@@ -146,7 +146,7 @@ src/ASF/sam/drivers/uart/uart.d src/ASF/sam/drivers/uart/uart.o: \
  ../src/ASF/common/utils/interrupt.h \
  ../src/ASF/common/utils/interrupt/interrupt_sam_nvic.h
 
-../src/ASF/sam/drivers/uart/uart.h:
+../src/ASF/sam/drivers/rtt/rtt.h:
 
 ../src/ASF/sam/utils/compiler.h:
 

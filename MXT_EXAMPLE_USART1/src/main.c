@@ -191,6 +191,7 @@ volatile Bool flag_button = false;
 volatile int flag_started = 0;
 volatile Bool flag_rtc_alarme = false;
 volatile Bool flag_animation_alarm = false;
+volatile Bool f_rtt_alarme = false;
 
 volatile Bool flag_END = false;
 
@@ -267,6 +268,26 @@ void RTC_Handler(void)
 	
 }
 
+void RTT_Handler(void)
+{
+	uint32_t ul_status;
+
+	/* Get RTT status */
+	ul_status = rtt_get_status(RTT);
+
+	/* IRQ due to Time has changed */
+	if ((ul_status & RTT_SR_RTTINC) == RTT_SR_RTTINC) {
+		
+	}
+
+	/* IRQ due to Alarm */
+	if ((ul_status & RTT_SR_ALMS) == RTT_SR_ALMS) {
+		
+		//pin_toggle(LED_PIO, LED_IDX_MASK);    // BLINK Led
+		f_rtt_alarme = true;                  // flag RTT alarme
+	}
+}
+
 /************************************************************************/
 /* STRUCTS                                                              */
 /************************************************************************/
@@ -326,6 +347,29 @@ void font_draw_text(tFont *font, const char *text, int x, int y, int spacing) {
 		}
 		p++;
 	}
+}
+
+
+
+static void RTT_init(uint16_t pllPreScale, uint32_t IrqNPulses)
+{
+	uint32_t ul_previous_time;
+
+	/* Configure RTT for a 1 second tick interrupt */
+	rtt_sel_source(RTT, false);
+	rtt_init(RTT, pllPreScale);
+	
+	ul_previous_time = rtt_read_timer_value(RTT);
+	while (ul_previous_time == rtt_read_timer_value(RTT));
+	
+	rtt_write_alarm_time(RTT, IrqNPulses+ul_previous_time);
+
+	/* Enable RTT interrupt */
+	NVIC_DisableIRQ(RTT_IRQn);
+	NVIC_ClearPendingIRQ(RTT_IRQn);
+	NVIC_SetPriority(RTT_IRQn, 0);
+	NVIC_EnableIRQ(RTT_IRQn);
+	rtt_enable_interrupt(RTT, RTT_MR_ALMIEN);
 }
 
 static void configure_lcd(void){
@@ -800,6 +844,7 @@ int main(void)
 		if(flag_started == 1 && isOpen == false){
 			//printf("COMECOU");
 			if(!isDrawn){
+				f_rtt_alarme = true;
 				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
 				ili9488_draw_filled_rectangle(0, 0, 500, 500);
 				int hora, min, sec;
@@ -833,11 +878,22 @@ int main(void)
 				}
 				flag_rtc_alarme = false;
 			}
-/*
-			if(flag_animation_alarm){
+			if(f_rtt_alarme){
+				// Gera uma interrupcao a cada 1 segundo
+				uint16_t pllPreScale = (int) (((float) 32768) / 2.0);
+				uint32_t irqRTTvalue  = 2;
+				      
+				// reinicia RTT para gerar um novo IRQ
+				RTT_init(pllPreScale, irqRTTvalue);
+				// Animacao
 				animation++;
+				animation = animation%4;
 				ili9488_draw_pixmap(load_icons[animation].x, load_icons[animation].y, load_icons[animation].image->width, load_icons[animation].image->height, load_icons[animation].image->data);
-			}*/
+				/*
+				* CLEAR FLAG
+				*/
+				f_rtt_alarme = false;
+			}
 			if(flag_END){
 				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
 				ili9488_draw_filled_rectangle(0, 0, 500, 200);
