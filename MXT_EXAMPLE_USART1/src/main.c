@@ -1,101 +1,89 @@
 /**
- * \file
- *
- * \brief Example of usage of the maXTouch component with USART
- *
- * This example shows how to receive touch data from a maXTouch device
- * using the maXTouch component, and display them in a terminal window by using
- * the USART driver.
- *
- * Copyright (c) 2014-2018 Microchip Technology Inc. and its subsidiaries.
- *
- * \asf_license_start
- *
- * \page License
- *
- * Subject to your compliance with these terms, you may use Microchip
- * software and any derivatives exclusively with Microchip products.
- * It is your responsibility to comply with third party license terms applicable
- * to your use of third party software (including open source software) that
- * may accompany Microchip software.
- *
- * THIS SOFTWARE IS SUPPLIED BY MICROCHIP "AS IS". NO WARRANTIES,
- * WHETHER EXPRESS, IMPLIED OR STATUTORY, APPLY TO THIS SOFTWARE,
- * INCLUDING ANY IMPLIED WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY,
- * AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT WILL MICROCHIP BE
- * LIABLE FOR ANY INDIRECT, SPECIAL, PUNITIVE, INCIDENTAL OR CONSEQUENTIAL
- * LOSS, DAMAGE, COST OR EXPENSE OF ANY KIND WHATSOEVER RELATED TO THE
- * SOFTWARE, HOWEVER CAUSED, EVEN IF MICROCHIP HAS BEEN ADVISED OF THE
- * POSSIBILITY OR THE DAMAGES ARE FORESEEABLE.  TO THE FULLEST EXTENT
- * ALLOWED BY LAW, MICROCHIP'S TOTAL LIABILITY ON ALL CLAIMS IN ANY WAY
- * RELATED TO THIS SOFTWARE WILL NOT EXCEED THE AMOUNT OF FEES, IF ANY,
- * THAT YOU HAVE PAID DIRECTLY TO MICROCHIP FOR THIS SOFTWARE.
- *
- * \asf_license_stop
- *
- */
-
-/**
- * \mainpage
- *
- * \section intro Introduction
- * This simple example reads data from the maXTouch device and sends it over
- * USART as ASCII formatted text.
- *
- * \section files Main files:
- * - example_usart.c: maXTouch component USART example file
- * - conf_mxt.h: configuration of the maXTouch component
- * - conf_board.h: configuration of board
- * - conf_clock.h: configuration of system clock
- * - conf_example.h: configuration of example
- * - conf_sleepmgr.h: configuration of sleep manager
- * - conf_twim.h: configuration of TWI driver
- * - conf_usart_serial.h: configuration of USART driver
- *
- * \section apiinfo maXTouch low level component API
- * The maXTouch component API can be found \ref mxt_group "here".
- *
- * \section deviceinfo Device Info
- * All UC3 and Xmega devices with a TWI module can be used with this component
- *
- * \section exampledescription Description of the example
- * This example will read data from the connected maXTouch explained board
- * over TWI. This data is then processed and sent over a USART data line
- * to the board controller. The board controller will create a USB CDC class
- * object on the host computer and repeat the incoming USART data from the
- * main controller to the host. On the host this object should appear as a
- * serial port object (COMx on windows, /dev/ttyxxx on your chosen Linux flavour).
- *
- * Connect a terminal application to the serial port object with the settings
- * Baud: 57600
- * Data bits: 8-bit
- * Stop bits: 1 bit
- * Parity: None
- *
- * \section compinfo Compilation Info
- * This software was written for the GNU GCC and IAR for AVR.
- * Other compilers may or may not work.
- *
- * \section contactinfo Contact Information
- * For further information, visit
- * <A href="http://www.atmel.com/">Atmel</A>.\n
- */
-/*
- * Support and FAQ: visit <a href="https://www.microchip.com/support/">Microchip Support</a>
- */
-
-/**
-* - TODO [x] Tela 2 quando clica o botao start
-* - TODO [x] Implementar funcao de lock
-* - TODO [x] Feedback sonoro dos botoes com Buzzer
-* - TODO [x] Implementar funcao da porta aberta
-* - TODO [x] Colocar fonte nos textos
-* - TODO [x] Cronometro do fim da lavagem
-* - TODO [ ] Animacao do tempo de carregamento
-* - TODO [x] FAZER MAIS DE DOIS BOTOES FUNCIONAREM NA LISTA
-* - TODO [x] BOTOES AINDA ESTAO COM TOQUE DUPLO
-* - TODO [x] DESCOMENTAR A ATIVACAO DO BUZZER(JA FOI IMPLEMENTADO)
+* \file
+*
+* \brief Example of usage of the maXTouch component with USART
+*
+* This example shows how to receive touch data from a maXTouch device
+* using the maXTouch component, and display them in a terminal window by using
+* the USART driver.
+*
+* Copyright (c) 2014-2018 Microchip Technology Inc. and its subsidiaries.
+*
+* \asf_license_start
+*
+* \page License
+*
+* Subject to your compliance with these terms, you may use Microchip
+* software and any derivatives exclusively with Microchip products.
+* It is your responsibility to comply with third party license terms applicable
+* to your use of third party software (including open source software) that
+* may accompany Microchip software.
+*
+* THIS SOFTWARE IS SUPPLIED BY MICROCHIP "AS IS". NO WARRANTIES,
+* WHETHER EXPRESS, IMPLIED OR STATUTORY, APPLY TO THIS SOFTWARE,
+* INCLUDING ANY IMPLIED WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY,
+* AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT WILL MICROCHIP BE
+* LIABLE FOR ANY INDIRECT, SPECIAL, PUNITIVE, INCIDENTAL OR CONSEQUENTIAL
+* LOSS, DAMAGE, COST OR EXPENSE OF ANY KIND WHATSOEVER RELATED TO THE
+* SOFTWARE, HOWEVER CAUSED, EVEN IF MICROCHIP HAS BEEN ADVISED OF THE
+* POSSIBILITY OR THE DAMAGES ARE FORESEEABLE.  TO THE FULLEST EXTENT
+* ALLOWED BY LAW, MICROCHIP'S TOTAL LIABILITY ON ALL CLAIMS IN ANY WAY
+* RELATED TO THIS SOFTWARE WILL NOT EXCEED THE AMOUNT OF FEES, IF ANY,
+* THAT YOU HAVE PAID DIRECTLY TO MICROCHIP FOR THIS SOFTWARE.
+*
+* \asf_license_stop
+*
 */
+
+/**
+* \mainpage
+*
+* \section intro Introduction
+* This simple example reads data from the maXTouch device and sends it over
+* USART as ASCII formatted text.
+*
+* \section files Main files:
+* - example_usart.c: maXTouch component USART example file
+* - conf_mxt.h: configuration of the maXTouch component
+* - conf_board.h: configuration of board
+* - conf_clock.h: configuration of system clock
+* - conf_example.h: configuration of example
+* - conf_sleepmgr.h: configuration of sleep manager
+* - conf_twim.h: configuration of TWI driver
+* - conf_usart_serial.h: configuration of USART driver
+*
+* \section apiinfo maXTouch low level component API
+* The maXTouch component API can be found \ref mxt_group "here".
+*
+* \section deviceinfo Device Info
+* All UC3 and Xmega devices with a TWI module can be used with this component
+*
+* \section exampledescription Description of the example
+* This example will read data from the connected maXTouch explained board
+* over TWI. This data is then processed and sent over a USART data line
+* to the board controller. The board controller will create a USB CDC class
+* object on the host computer and repeat the incoming USART data from the
+* main controller to the host. On the host this object should appear as a
+* serial port object (COMx on windows, /dev/ttyxxx on your chosen Linux flavour).
+*
+* Connect a terminal application to the serial port object with the settings
+* Baud: 57600
+* Data bits: 8-bit
+* Stop bits: 1 bit
+* Parity: None
+*
+* \section compinfo Compilation Info
+* This software was written for the GNU GCC and IAR for AVR.
+* Other compilers may or may not work.
+*
+* \section contactinfo Contact Information
+* For further information, visit
+* <A href="http://www.atmel.com/">Atmel</A>.\n
+*/
+/*
+* Support and FAQ: visit <a href="https://www.microchip.com/support/">Microchip Support</a>
+*/
+
 /************************************************************************/
 /* includes                                                             */
 /************************************************************************/
@@ -129,7 +117,7 @@
 #include "icones/load3.h"					//author: https://www.flaticon.com/authors/roundicons
 #include "icones/load4.h"					//author: https://www.flaticon.com/authors/roundicons
 #include "icones/stop.h"					//author: https://www.flaticon.com/authors/smashicons
-		
+
 
 /************************************************************************/
 /* DEFINES                                                              */
@@ -155,10 +143,10 @@
 
 
 /**
- *  Informacoes para o RTC
- *  poderia ser extraida do __DATE__ e __TIME__
- *  ou ser atualizado pelo PC.
- */
+*  Informacoes para o RTC
+*  poderia ser extraida do __DATE__ e __TIME__
+*  ou ser atualizado pelo PC.
+*/
 #define YEAR        2018
 #define MOUNTH       3
 #define DAY         19
@@ -182,7 +170,7 @@ struct ili9488_opt_t g_ili9488_display_opt;
 
 
 volatile Bool locked = false;
-volatile Bool flag_back = false;	
+volatile Bool flag_back = false;
 volatile Bool flag_next = false;
 volatile Bool isWashing = false;
 volatile Bool isOpen = false;
@@ -205,7 +193,7 @@ struct botao {
 	uint16_t size;
 	tImage *image;
 	void (*p_handler)(void);
-};	
+};
 
 struct icone {
 	uint16_t x;
@@ -249,15 +237,15 @@ void RTC_Handler(void)
 	*/
 	if ((ul_status & RTC_SR_SEC) == RTC_SR_SEC) {
 		rtc_clear_status(RTC, RTC_SCCR_SECCLR);
-					
+		
 
 	}
 	
 	/* Time or date alarm */
 	if ((ul_status & RTC_SR_ALARM) == RTC_SR_ALARM) {
-			rtc_clear_status(RTC, RTC_SCCR_ALRCLR);
-			flag_rtc_alarme = true;
-			
+		rtc_clear_status(RTC, RTC_SCCR_ALRCLR);
+		flag_rtc_alarme = true;
+		
 
 	}
 	
@@ -282,8 +270,6 @@ void RTT_Handler(void)
 
 	/* IRQ due to Alarm */
 	if ((ul_status & RTT_SR_ALMS) == RTT_SR_ALMS) {
-		
-		//pin_toggle(LED_PIO, LED_IDX_MASK);    // BLINK Led
 		f_rtt_alarme = true;                  // flag RTT alarme
 	}
 }
@@ -315,10 +301,9 @@ struct icone loading4	= {.x=240-32,.y=icon_y+32,.size=64, .image = &load4};
 int processa_touch(struct botao b[], uint *rtn, uint N ,uint x, uint y ){
 	
 	for (int i = 0; i< N; i++){
-		if(x >= (b[i].x) && x <= (b[i].x) +(b[i].size)){		
+		if(x >= (b[i].x) && x <= (b[i].x) +(b[i].size)){
 			if(y >= (b[i].y) && y<= (b[i].y) + (b[i].size)) {
 				*rtn = i;
-				printf(" foi ");
 				pio_set(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
 				delay_ms(20);
 				pio_clear(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
@@ -326,7 +311,6 @@ int processa_touch(struct botao b[], uint *rtn, uint N ,uint x, uint y ){
 			}
 		}
 	}
-	printf(" Nao foi ");
 	return 0;
 
 }
@@ -428,51 +412,51 @@ static void mxt_init(struct mxt_device *device)
 
 	/* Initialize the maXTouch device */
 	status = mxt_init_device(device, MAXTOUCH_TWI_INTERFACE,
-			MAXTOUCH_TWI_ADDRESS, MAXTOUCH_XPRO_CHG_PIO);
+	MAXTOUCH_TWI_ADDRESS, MAXTOUCH_XPRO_CHG_PIO);
 	Assert(status == STATUS_OK);
 
 	/* Issue soft reset of maXTouch device by writing a non-zero value to
-	 * the reset register */
+	* the reset register */
 	mxt_write_config_reg(device, mxt_get_object_address(device,
-			MXT_GEN_COMMANDPROCESSOR_T6, 0)
-			+ MXT_GEN_COMMANDPROCESSOR_RESET, 0x01);
+	MXT_GEN_COMMANDPROCESSOR_T6, 0)
+	+ MXT_GEN_COMMANDPROCESSOR_RESET, 0x01);
 
 	/* Wait for the reset of the device to complete */
 	delay_ms(MXT_RESET_TIME);
 
 	/* Write data to configuration registers in T7 configuration object */
 	mxt_write_config_reg(device, mxt_get_object_address(device,
-			MXT_GEN_POWERCONFIG_T7, 0) + 0, 0x20);
+	MXT_GEN_POWERCONFIG_T7, 0) + 0, 0x20);
 	mxt_write_config_reg(device, mxt_get_object_address(device,
-			MXT_GEN_POWERCONFIG_T7, 0) + 1, 0x10);
+	MXT_GEN_POWERCONFIG_T7, 0) + 1, 0x10);
 	mxt_write_config_reg(device, mxt_get_object_address(device,
-			MXT_GEN_POWERCONFIG_T7, 0) + 2, 0x4b);
+	MXT_GEN_POWERCONFIG_T7, 0) + 2, 0x4b);
 	mxt_write_config_reg(device, mxt_get_object_address(device,
-			MXT_GEN_POWERCONFIG_T7, 0) + 3, 0x84);
+	MXT_GEN_POWERCONFIG_T7, 0) + 3, 0x84);
 
 	/* Write predefined configuration data to configuration objects */
 	mxt_write_config_object(device, mxt_get_object_address(device,
-			MXT_GEN_ACQUISITIONCONFIG_T8, 0), &t8_object);
+	MXT_GEN_ACQUISITIONCONFIG_T8, 0), &t8_object);
 	mxt_write_config_object(device, mxt_get_object_address(device,
-			MXT_TOUCH_MULTITOUCHSCREEN_T9, 0), &t9_object);
+	MXT_TOUCH_MULTITOUCHSCREEN_T9, 0), &t9_object);
 	mxt_write_config_object(device, mxt_get_object_address(device,
-			MXT_SPT_CTE_CONFIGURATION_T46, 0), &t46_object);
+	MXT_SPT_CTE_CONFIGURATION_T46, 0), &t46_object);
 	mxt_write_config_object(device, mxt_get_object_address(device,
-			MXT_PROCI_SHIELDLESS_T56, 0), &t56_object);
+	MXT_PROCI_SHIELDLESS_T56, 0), &t56_object);
 
 	/* Issue recalibration command to maXTouch device by writing a non-zero
-	 * value to the calibrate register */
+	* value to the calibrate register */
 	mxt_write_config_reg(device, mxt_get_object_address(device,
-			MXT_GEN_COMMANDPROCESSOR_T6, 0)
-			+ MXT_GEN_COMMANDPROCESSOR_CALIBRATE, 0x01);
+	MXT_GEN_COMMANDPROCESSOR_T6, 0)
+	+ MXT_GEN_COMMANDPROCESSOR_CALIBRATE, 0x01);
 }
 
 
 void draw_time(t_ciclo ciclo){
-		char b[512];
-		int Tempo_ciclo = ciclo.enxagueQnt * ciclo.enxagueTempo + ciclo.centrifugacaoTempo; // Minutos
-		sprintf(b, "Tempo: 00 : %02d", Tempo_ciclo);
-		font_draw_text(&calibri_24, b, 12, 12, 1);
+	char b[512];
+	int Tempo_ciclo = ciclo.enxagueQnt * ciclo.enxagueTempo + ciclo.centrifugacaoTempo; // Minutos
+	sprintf(b, "Tempo: 00 : %02d", Tempo_ciclo);
+	font_draw_text(&calibri_24, b, 12, 12, 1);
 }
 
 uint32_t convert_axis_system_x(uint32_t touch_y) {
@@ -497,19 +481,19 @@ void mxt_debounce(struct mxt_device *device, struct botao botoes[], uint Nbotoes
 	struct mxt_touch_event touch_event;
 
 	/* Collect touch events and put the data in a string,
-	 * maximum 2 events at the time */
+	* maximum 2 events at the time */
 	do {
 		/* Temporary buffer for each new touch event line */
 		char buf[STRING_LENGTH];
-	
+		
 		/* Read next next touch event in the queue, discard if read fails */
 		if (mxt_read_touch_event(device, &touch_event) != STATUS_OK) {
 			continue;
-		}	
+		}
 		i++;
 
 		/* Check if there is still messages in the queue and
-		 * if we have reached the maximum numbers of events */
+		* if we have reached the maximum numbers of events */
 	} while ((mxt_is_message_pending(device)) & (i < MAX_ENTRIES));
 
 	/* If there is any entries in the buffer, send them over USART */
@@ -529,17 +513,17 @@ void mxt_handler(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
 	struct mxt_touch_event touch_event;
 
 	/* Collect touch events and put the data in a string,
-	 * maximum 2 events at the time */
+	* maximum 2 events at the time */
 	do {
 		/* Temporary buffer for each new touch event line */
 		char buf[STRING_LENGTH];
-	
+		
 		/* Read next next touch event in the queue, discard if read fails */
 		if (mxt_read_touch_event(device, &touch_event) != STATUS_OK) {
 			continue;
 		}
 		
-		 // eixos trocados (quando na vertical LCD)
+		// eixos trocados (quando na vertical LCD)
 		uint32_t conv_y = convert_axis_system_x(touch_event.y);
 		uint32_t conv_x = convert_axis_system_y(touch_event.x);
 		//conv_y = ILI9488_LCD_HEIGHT - conv_y;
@@ -550,8 +534,6 @@ void mxt_handler(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
 		/* Format a new entry in the data string that will be sent over USART */
 		sprintf(buf, "X:%3d Y:%3d \n", conv_x, conv_y);
 		last_status = touch_event.status;
-		printf("||     STATUS: %d      ||", touch_event.status);
-		
 		if(last_status<60){
 			uint i;
 			if(!locked){
@@ -560,12 +542,6 @@ void mxt_handler(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
 					botoes[i].p_handler();
 				}
 			}
-/*
-			else{
-				//se a tela estiver travada unico botao funcional sera o bLocked que tem index 0.
-				if(processa_touch(botoes, &i, 1, conv_x, conv_y))
-				botoes[i].p_handler();
-			}*/
 		}
 		else if(touch_event.status == 144 && locked){
 			if(processa_touch(botoes, &i, Nbotoes, conv_x, conv_y)){
@@ -573,7 +549,6 @@ void mxt_handler(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
 					printf(";;    touch_counter: %d      ;;", touch_counter);
 					touch_counter ++;
 				}
-
 			}
 			if(touch_counter >= 20){
 				touch_counter = 0;
@@ -590,7 +565,7 @@ void mxt_handler(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
 		break;
 
 		/* Check if there is still messages in the queue and
-		 * if we have reached the maximum numbers of events */
+		* if we have reached the maximum numbers of events */
 	} while ((mxt_is_message_pending(device)) & (i < MAX_ENTRIES));
 
 	/* If there is any entries in the buffer, send them over USART */
@@ -668,7 +643,6 @@ void draw_menu_screen(void) {
 	ili9488_draw_filled_rectangle(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,diarioAzul.x + diarioAzul.size+40,diarioAzul.y+diarioAzul.size+40);
 	
 	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_BLACK));
-	//ili9488_draw_string(diarioAzul.x,diarioAzul.y + diarioAzul.size + 20,"Ciclo Diario" );
 	font_draw_text(&calibri_24, "Diario", diarioAzul.x, diarioAzul.y + diarioAzul.size + 20, 1);
 	ili9488_draw_pixmap(bLocked.x, bLocked.y, bLocked.image->width, bLocked.image->height, bLocked.image->data);
 	
@@ -704,9 +678,6 @@ void draw_door_screen(void){
 	font_draw_text(&calibri_36, "FECHE A PORTA", 50, 145, 3);
 	ili9488_draw_pixmap(botaoStop.x, botaoStop.y,botaoStop.image->width, botaoStop.image->height, botaoStop.image->data);
 	ili9488_draw_pixmap(bLocked.x, bLocked.y, bLocked.image->width, bLocked.image->height, bLocked.image->data);
-	//pio_set(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
-	//delay_ms(60);
-	//pio_clear(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
 	isDrawn = true;
 }
 
@@ -762,31 +733,27 @@ int main(void)
 	struct icone load_icons[] = {loading1, loading2, loading3, loading4};
 
 	while (true) {
-		//printf(" FLAGe :%d   ", flag_started);
 		/* Check for any pending messages and run message handler if any
-		 * message is found in the queue */
+		* message is found in the queue */
 		if (mxt_is_message_pending(&device)) {
 			mxt_handler(&device, botoes,  sizeof(botoes) / sizeof(struct botao));
 		}
 		if(locked){
-			//printf("LOCKED");
 			if(!isDrawn){
 				draw_lock_screen();
 			}
 		}
 		
 		if(flag_button){
-			if(flag_started == 0){ //so abre a porta se a maquina nao estiver funcionando 
+			if(flag_started == 0){ //so abre a porta se a maquina nao estiver funcionando
 				if(isOpen){
 					isOpen = false;
 					
 					pio_clear(LED_PIO, LED_PIO_IDX_MASK);
-					//printf("PORTA FECHADA");
 				}
 				else{
 					isOpen = true;
 					pio_set(LED_PIO, LED_PIO_IDX_MASK);
-					//printf("PORTA ABERTA");
 				}
 				flag_button = false;
 				if(!locked){
@@ -824,17 +791,17 @@ int main(void)
 				}
 				if (tipo_lavagem%5 == 2 ){
 					draw_cicle(enxague, c_enxague);
-					tempo_total = calcula_tempo(c_enxague);				
+					tempo_total = calcula_tempo(c_enxague);
 					
 				}
 				if (tipo_lavagem%5 == 3 ){
 					draw_cicle(centrifuga, c_centrifuga);
-					tempo_total = calcula_tempo(c_centrifuga);				
+					tempo_total = calcula_tempo(c_centrifuga);
 					
 				}
 				if (tipo_lavagem%5 == 4 ){
 					draw_cicle(fast, c_rapido);
-					tempo_total = calcula_tempo(c_rapido);					
+					tempo_total = calcula_tempo(c_rapido);
 					
 				}
 				flag_next = false;
@@ -842,7 +809,6 @@ int main(void)
 			}
 		}
 		if(flag_started == 1 && isOpen == false){
-			//printf("COMECOU");
 			if(!isDrawn){
 				f_rtt_alarme = true;
 				flag_animation_alarm = true;
@@ -864,7 +830,6 @@ int main(void)
 					pio_set(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
 					delay_ms(20);
 					pio_clear(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
-					//animation = 0;
 					flag_END = true;
 
 				}
@@ -875,20 +840,21 @@ int main(void)
 					char b[512];
 					sprintf(b, "Tempo restante: 00 : %02d", tempo_total);
 					font_draw_text(&calibri_36, b, 12, 12, 1);
-					//ili9488_draw_pixmap(load_icons[animation].x, load_icons[animation].y, load_icons[animation].image->width, load_icons[animation].image->height, load_icons[animation].image->data);		
 				}
 				flag_rtc_alarme = false;
 			}
-			if(f_rtt_alarme & flag_animation_alarm & locked){
+			if(f_rtt_alarme & flag_animation_alarm & !locked){
 				// Gera uma interrupcao a cada 1 segundo
 				uint16_t pllPreScale = (int) (((float) 32768) / 2.0);
 				uint32_t irqRTTvalue  = 2;
-				      
+				
 				// reinicia RTT para gerar um novo IRQ
 				RTT_init(pllPreScale, irqRTTvalue);
 				// Animacao
 				animation++;
 				animation = animation%4;
+				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
+				ili9488_draw_filled_rectangle(240-32, 56+32, 64, 64);
 				ili9488_draw_pixmap(load_icons[animation].x, load_icons[animation].y, load_icons[animation].image->width, load_icons[animation].image->height, load_icons[animation].image->data);
 				/*
 				* CLEAR FLAG
@@ -898,7 +864,7 @@ int main(void)
 			if(flag_END){
 				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
 				ili9488_draw_filled_rectangle(0, 0, 500, 200);
-				font_draw_text(&calibri_24, "Lavagem finalizada" ,130, ILI9488_LCD_HEIGHT/2, 1);	
+				font_draw_text(&calibri_24, "Lavagem finalizada" ,130, ILI9488_LCD_HEIGHT/2, 1);
 				pio_set(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
 				delay_s(1.4);
 				pio_clear(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
