@@ -689,8 +689,8 @@ int main(void)
 	printf("\n\rmaXTouch data USART transmitter\n\r");
 
 	
-	struct botao botoes[] = {bLocked, botaoStart, bUnlocked, botaoNext, botaoBack};
-	struct icone load_icons[] = {loading1, loading2, loading3, loading4};
+	const struct botao botoes[] = {bLocked, botaoStart, bUnlocked, botaoNext, botaoBack};
+	const struct icone load_icons[] = {loading1, loading2, loading3, loading4};
 
 	while (true) {
 		/* Check for any pending messages and run message handler if any
