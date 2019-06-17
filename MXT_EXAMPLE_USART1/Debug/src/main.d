@@ -191,7 +191,7 @@ src/main.d src/main.o: ../src/main.c ../src/header.h ../src/tfont.h \
  ../src/icones/locked_colorido.h ../src/icones/unlocked_colorido.h \
  ../src/icones/pesado_colorido.h ../src/icones/fast2.h \
  ../src/icones/load1.h ../src/icones/load2.h ../src/icones/load3.h \
- ../src/icones/load4.h ../src/icones/stop.h
+ ../src/icones/load4.h ../src/icones/stop.h ../src/gui.h
 
 ../src/header.h:
 
@@ -624,3 +624,5 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-no
 ../src/icones/load4.h:
 
 ../src/icones/stop.h:
+
+../src/gui.h:

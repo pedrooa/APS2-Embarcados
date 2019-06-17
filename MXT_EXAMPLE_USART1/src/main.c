@@ -86,6 +86,7 @@
 
 
 #include <header.h>
+#include <gui.h>
 
 /************************************************************************/
 /* DEFINES                                                              */
@@ -412,7 +413,7 @@ void draw_time(t_ciclo ciclo){
 	char b[512];
 	int Tempo_ciclo = ciclo.enxagueQnt * ciclo.enxagueTempo + ciclo.centrifugacaoTempo; // Minutos
 	sprintf(b, "Tempo: 00 : %02d", Tempo_ciclo);
-	font_draw_text(&calibri_24, b, 12, 12, 1);
+	font_draw_text(&calibri_24, b, tempo_x, tempo_y, 1);
 }
 
 uint32_t convert_axis_system_x(uint32_t touch_y) {
@@ -628,7 +629,7 @@ void draw_door_screen(void){
 	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
 	ili9488_draw_filled_rectangle(0, 0, 500, 500);
 	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_RED));
-	font_draw_text(&calibri_36, "FECHE A PORTA", 50, 145, 3);
+	font_draw_text(&calibri_36, "FECHE A PORTA", close_door_x, close_door_y, 3);
 	ili9488_draw_pixmap(botaoStop.x, botaoStop.y,botaoStop.image->width, botaoStop.image->height, botaoStop.image->data);
 	ili9488_draw_pixmap(bLocked.x, bLocked.y, bLocked.image->width, bLocked.image->height, bLocked.image->data);
 	isDrawn = true;
@@ -697,10 +698,8 @@ int main(void)
 		if (mxt_is_message_pending(&device)) {
 			mxt_handler(&device, botoes,  sizeof(botoes) / sizeof(struct botao));
 		}
-		if(locked){
-			if(!isDrawn){
-				draw_lock_screen();
-			}
+		if(locked & !isDrawn){
+			draw_lock_screen();
 		}
 		
 		if(flag_button){
@@ -776,9 +775,8 @@ int main(void)
 				int hora, min, sec;
 				rtc_get_time(RTC, &hora, &min, &sec);
 				rtc_set_time_alarm(RTC, 1, hora, 1, min+1,1, sec);
-				char b[512];
 				sprintf(b, "Tempo restante: 00 : %02d", tempo_total);
-				font_draw_text(&calibri_36, b, 12, 12, 1);
+				font_draw_text(&calibri_36, b, tempo_x, tempo_y, 1);
 				draw_started_screen();
 				
 			}
@@ -796,9 +794,8 @@ int main(void)
 					int hora, min, sec;
 					rtc_get_time(RTC, &hora, &min, &sec);
 					rtc_set_time_alarm(RTC, 1, hora, 1, min+1,1, sec);
-					char b[512];
 					sprintf(b, "Tempo restante: 00 : %02d", tempo_total);
-					font_draw_text(&calibri_36, b, 12, 12, 1);
+					font_draw_text(&calibri_36, b, tempo_x, tempo_y, 1);
 				}
 				flag_rtc_alarme = 0;
 			}
