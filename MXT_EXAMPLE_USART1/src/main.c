@@ -84,40 +84,8 @@
 * Support and FAQ: visit <a href="https://www.microchip.com/support/">Microchip Support</a>
 */
 
-/************************************************************************/
-/* includes                                                             */
-/************************************************************************/
-#include "tfont.h"
-#include "calibri_36.h"
-#include "calibri_24.h"
-#include "arial_72.h"
-#include <asf.h>
-#include <maquina1.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include "conf_board.h"
-#include "conf_example.h"
-#include "conf_uart_serial.h"
 
-//ICONS
-
-#include "icones/next_colorido.h"			//author: https://www.flaticon.com/authors/smashicons
-#include "icones/back_colorido.h"			//author: https://www.flaticon.com/authors/smashicons
-#include "icones/diario_azul.h"				//author: https://www.flaticon.com/authors/smashicons
-#include "icones/centrifuga_colorido.h"		//author: https://www.flaticon.com/authors/pixelmeetup
-#include "icones/enxague_colorido.h"		//author: https://www.flaticon.com/authors/smalllikeart
-#include "icones/fast_colorido.h"			//author: https://www.flaticon.com/authors/freepik
-#include "icones/locked_colorido.h"			//author: https://www.flaticon.com/authors/smashicons
-#include "icones/unlocked_colorido.h"		//author: https://www.flaticon.com/authors/smashicons
-#include "icones/pesado_colorido.h"			//author: https://www.flaticon.com/authors/freepik
-#include "icones/fast2.h"					//author: https://www.flaticon.com/authors/smashicons
-#include "icones/load1.h"					//author: https://www.flaticon.com/authors/roundicons
-#include "icones/load2.h"					//author: https://www.flaticon.com/authors/roundicons
-#include "icones/load3.h"					//author: https://www.flaticon.com/authors/roundicons
-#include "icones/load4.h"					//author: https://www.flaticon.com/authors/roundicons
-#include "icones/stop.h"					//author: https://www.flaticon.com/authors/smashicons
-
+#include <header.h>
 
 /************************************************************************/
 /* DEFINES                                                              */
@@ -163,28 +131,24 @@
 #define icon_x 176
 #define icon_y 56
 
+#define DELAY_TOUCH_IN_MS 20
+
 /************************************************************************/
 /* variaveis globais                                                    */
 /************************************************************************/
 struct ili9488_opt_t g_ili9488_display_opt;
 
 
-volatile Bool locked = false;
-volatile Bool flag_back = false;
-volatile Bool flag_next = false;
-volatile Bool isWashing = false;
-volatile Bool isOpen = false;
-volatile Bool isDrawn = false;
-volatile Bool flag_button = false;
+volatile int locked = 0;
+volatile int flag_back = 0;
+volatile int flag_next = 0;
+volatile int isDrawn = 0;
+volatile int flag_button = 0;
 volatile int flag_started = 0;
-volatile Bool flag_rtc_alarme = false;
-volatile Bool flag_animation_alarm = false;
-volatile Bool f_rtt_alarme = false;
-
-volatile Bool flag_END = false;
-
+volatile int flag_rtc_alarme = 0;
+volatile int f_rtt_alarme = 0;
 int touch_counter = 0;
-int animation = 0;
+
 
 /** \brief Touch event struct */
 struct botao {
@@ -201,78 +165,6 @@ struct icone {
 	uint16_t size;
 	tImage *image;
 };
-
-
-
-/************************************************************************/
-/* handler / callbacks                                                  */
-/************************************************************************/
-void back_callback(void){
-	flag_back = true;
-}
-void next_callback(void){
-	flag_next = true;
-}
-
-void lock_callback(void){
-	locked = !locked;
-	isDrawn = false;
-}
-
-void PORTA_callback(void){
-	flag_button = true;
-}
-void start_callback(void){
-	flag_started = !flag_started;
-	isDrawn = false;
-}
-void RTC_Handler(void)
-{
-	uint32_t ul_status = rtc_get_status(RTC);
-
-	/*
-	*  Verifica por qual motivo entrou
-	*  na interrupcao, se foi por segundo
-	*  ou Alarm
-	*/
-	if ((ul_status & RTC_SR_SEC) == RTC_SR_SEC) {
-		rtc_clear_status(RTC, RTC_SCCR_SECCLR);
-		
-
-	}
-	
-	/* Time or date alarm */
-	if ((ul_status & RTC_SR_ALARM) == RTC_SR_ALARM) {
-		rtc_clear_status(RTC, RTC_SCCR_ALRCLR);
-		flag_rtc_alarme = true;
-		
-
-	}
-	
-	rtc_clear_status(RTC, RTC_SCCR_ACKCLR);
-	rtc_clear_status(RTC, RTC_SCCR_TIMCLR);
-	rtc_clear_status(RTC, RTC_SCCR_CALCLR);
-	rtc_clear_status(RTC, RTC_SCCR_TDERRCLR);
-	
-}
-
-void RTT_Handler(void)
-{
-	uint32_t ul_status;
-
-	/* Get RTT status */
-	ul_status = rtt_get_status(RTT);
-
-	/* IRQ due to Time has changed */
-	if ((ul_status & RTT_SR_RTTINC) == RTT_SR_RTTINC) {
-		
-	}
-
-	/* IRQ due to Alarm */
-	if ((ul_status & RTT_SR_ALMS) == RTT_SR_ALMS) {
-		f_rtt_alarme = true;                  // flag RTT alarme
-	}
-}
 
 /************************************************************************/
 /* STRUCTS                                                              */
@@ -294,6 +186,70 @@ struct icone loading2	= {.x=240-32,.y=icon_y+32,.size=64, .image = &load2};
 struct icone loading3	= {.x=240-32,.y=icon_y+32,.size=64, .image = &load3};
 struct icone loading4	= {.x=240-32,.y=icon_y+32,.size=64, .image = &load4};
 
+/************************************************************************/
+/* handler / callbacks                                                  */
+/************************************************************************/
+void back_callback(void){
+	flag_back = 1;
+}
+void next_callback(void){
+	flag_next = 1;
+}
+
+void lock_callback(void){
+	locked = !locked;
+	isDrawn = 1;
+}
+
+void PORTA_callback(void){
+	flag_button = 1;
+}
+void start_callback(void){
+	flag_started = !flag_started;
+	isDrawn = 1;
+}
+void RTC_Handler(void)
+{
+	uint32_t ul_status = rtc_get_status(RTC);
+
+	/*
+	*  Verifica por qual motivo entrou
+	*  na interrupcao, se foi por segundo
+	*  ou Alarm
+	*/
+
+	
+	/* Time or date alarm */
+	if ((ul_status & RTC_SR_ALARM) == RTC_SR_ALARM) {
+		rtc_clear_status(RTC, RTC_SCCR_ALRCLR);
+		flag_rtc_alarme = 1;
+		
+
+	}
+	
+	rtc_clear_status(RTC, RTC_SCCR_ACKCLR);
+	rtc_clear_status(RTC, RTC_SCCR_TIMCLR);
+	rtc_clear_status(RTC, RTC_SCCR_CALCLR);
+	rtc_clear_status(RTC, RTC_SCCR_TDERRCLR);
+	
+}
+
+void RTT_Handler(void)
+{
+	uint32_t ul_status;
+
+	/* Get RTT status */
+	ul_status = rtt_get_status(RTT);
+
+
+	/* IRQ due to Alarm */
+	if ((ul_status & RTT_SR_ALMS) == RTT_SR_ALMS) {
+		f_rtt_alarme = 1;                  // flag RTT alarme
+	}
+}
+
+
+
 
 /************************************************************************/
 /* funcoes                                                              */
@@ -305,7 +261,7 @@ int processa_touch(struct botao b[], uint *rtn, uint N ,uint x, uint y ){
 			if(y >= (b[i].y) && y<= (b[i].y) + (b[i].size)) {
 				*rtn = i;
 				pio_set(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
-				delay_ms(20);
+				delay_ms(DELAY_TOUCH_IN_MS);
 				pio_clear(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
 				return 1;
 			}
@@ -526,9 +482,6 @@ void mxt_handler(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
 		// eixos trocados (quando na vertical LCD)
 		uint32_t conv_y = convert_axis_system_x(touch_event.y);
 		uint32_t conv_x = convert_axis_system_y(touch_event.x);
-		//conv_y = ILI9488_LCD_HEIGHT - conv_y;
-		//uint32_t conv_y = touch_event.y;
-		//uint32_t conv_x = touch_event.x;
 		
 		
 		/* Format a new entry in the data string that will be sent over USART */
@@ -709,6 +662,12 @@ int main(void)
 		.stopbits     = USART_SERIAL_STOP_BIT
 	};
 	int tempo_total = calcula_tempo(c_diario);
+	int flag_END = 0;
+	int isOpen = 0;
+	int flag_animation_alarm = 0;
+	int animation = 0;
+
+
 	char b[512];
 
 	int tipo_lavagem = 1000;
@@ -747,7 +706,7 @@ int main(void)
 		if(flag_button){
 			if(flag_started == 0){ //so abre a porta se a maquina nao estiver funcionando
 				if(isOpen){
-					isOpen = false;
+					isOpen = 0;
 					
 					pio_clear(LED_PIO, LED_PIO_IDX_MASK);
 				}
@@ -755,9 +714,9 @@ int main(void)
 					isOpen = true;
 					pio_set(LED_PIO, LED_PIO_IDX_MASK);
 				}
-				flag_button = false;
+				flag_button = 0;
 				if(!locked){
-					isDrawn = false;
+					isDrawn = 0;
 				}
 				
 			}
@@ -773,10 +732,10 @@ int main(void)
 			}
 			if(flag_next == true || flag_back == true){
 				
-				if(flag_next == true){
+				if(flag_next){
 					tipo_lavagem += 1;
 				}
-				else if(flag_back == true){
+				else if(flag_back){
 					tipo_lavagem -= 1;
 				}
 				if (tipo_lavagem%5 == 0 ){
@@ -804,14 +763,14 @@ int main(void)
 					tempo_total = calcula_tempo(c_rapido);
 					
 				}
-				flag_next = false;
-				flag_back = false;
+				flag_next = 0;
+				flag_back = 0;
 			}
 		}
-		if(flag_started == 1 && isOpen == false){
+		if(flag_started == 1 && isOpen == 0){
 			if(!isDrawn){
-				f_rtt_alarme = true;
-				flag_animation_alarm = true;
+				f_rtt_alarme = 1;
+				flag_animation_alarm = 1;
 				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
 				ili9488_draw_filled_rectangle(0, 0, 500, 500);
 				int hora, min, sec;
@@ -828,7 +787,7 @@ int main(void)
 				
 				if(tempo_total == 0) {
 					pio_set(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
-					delay_ms(20);
+					delay_ms(DELAY_TOUCH_IN_MS);
 					pio_clear(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
 					flag_END = true;
 
@@ -841,7 +800,7 @@ int main(void)
 					sprintf(b, "Tempo restante: 00 : %02d", tempo_total);
 					font_draw_text(&calibri_36, b, 12, 12, 1);
 				}
-				flag_rtc_alarme = false;
+				flag_rtc_alarme = 0;
 			}
 			if(f_rtt_alarme & flag_animation_alarm & !locked){
 				// Gera uma interrupcao a cada 1 segundo
@@ -859,7 +818,7 @@ int main(void)
 				/*
 				* CLEAR FLAG
 				*/
-				f_rtt_alarme = false;
+				f_rtt_alarme = 0;
 			}
 			if(flag_END){
 				ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
@@ -877,12 +836,12 @@ int main(void)
 				delay_s(1.4);
 				pio_clear(BUZZER_PIO, BUZZER_PIO_IDX_MASK);
 				delay_ms(500);
-				flag_END = false;
-				flag_animation_alarm = false;
+				flag_END = 0;
+				flag_animation_alarm = 0;
 			}
 			
 		}
-		else if(flag_started == 1 && isOpen == true){
+		else if(flag_started == 1 && isOpen == 1){
 			if(!isDrawn){
 				draw_door_screen();
 			}
