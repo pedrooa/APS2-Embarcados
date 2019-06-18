@@ -134,6 +134,8 @@
 
 #define DELAY_TOUCH_IN_MS 20
 
+#define ONE_TOUCH 144
+
 /************************************************************************/
 /* variaveis globais                                                    */
 /************************************************************************/
@@ -497,7 +499,7 @@ void mxt_handler(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
 				}
 			}
 		}
-		else if(touch_event.status == 144 && locked){
+		else if(touch_event.status == ONE_TOUCH && locked){
 			if(processa_touch(botoes, &i, Nbotoes, conv_x, conv_y)){
 				if(i == 2){
 					printf(";;    touch_counter: %d      ;;", touch_counter);
