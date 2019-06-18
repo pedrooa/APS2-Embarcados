@@ -664,7 +664,7 @@ int main(void)
 		.paritytype   = USART_SERIAL_PARITY,
 		.stopbits     = USART_SERIAL_STOP_BIT
 	};
-	int tempo_total = calcula_tempo(c_diario);
+	
 	int flag_END = 0;
 	int isOpen = 0;
 	int flag_animation_alarm = 0;
@@ -693,6 +693,7 @@ int main(void)
 	
 	const struct botao botoes[] = {bLocked, botaoStart, bUnlocked, botaoNext, botaoBack};
 	const struct icone load_icons[] = {loading1, loading2, loading3, loading4};
+	int tempo_total = calcula_tempo(c_diario);
 
 	while (true) {
 		/* Check for any pending messages and run message handler if any
