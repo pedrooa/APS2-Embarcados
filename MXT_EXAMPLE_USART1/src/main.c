@@ -619,11 +619,13 @@ void draw_started_screen(void){
 	isDrawn = true;
 }
 
-void draw_lock_screen(void){
+void draw_lock_screen(int tempo_total){
 	ili9488_set_foreground_color(COLOR_CONVERT(COLOR_WHITE));
 	ili9488_draw_filled_rectangle(0, 0, 500, 500);
 	ili9488_draw_pixmap(bUnlocked.x, bUnlocked.y, bUnlocked.image->width, bUnlocked.image->height, bUnlocked.image->data);
-	font_draw_text(&calibri_36, "TELA TRAVADA", 50, 145, 3);
+	font_draw_text(&calibri_36, "TELA TRAVADA", close_door_x, close_door_y, 3);
+	sprintf(b, "Tempo restante: 00 : %02d", tempo_total);
+	font_draw_text(&calibri_36, b, tempo_x, tempo_y, 1);
 	isDrawn = true;
 }
 
@@ -702,7 +704,7 @@ int main(void)
 			mxt_handler(&device, botoes,  sizeof(botoes) / sizeof(struct botao));
 		}
 		if(locked & !isDrawn){
-			draw_lock_screen();
+			draw_lock_screen(tempo_total);
 		}
 		
 		if(flag_button){
