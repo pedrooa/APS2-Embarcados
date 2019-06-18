@@ -731,37 +731,43 @@ int main(void)
 			}
 			if(flag_next == true || flag_back == true){
 				
+		
+				
 				if(flag_next){
 					tipo_lavagem += 1;
 				}
 				else if(flag_back){
 					tipo_lavagem -= 1;
 				}
-				if (tipo_lavagem%5 == 0 ){
-					draw_cicle(diarioAzul, c_diario);
-					tempo_total = calcula_tempo(c_diario);
+				switch (tipo_lavagem%5)
+				{
+					case 0:
+						draw_cicle(diarioAzul, c_diario);
+						tempo_total = calcula_tempo(c_diario);
+						break;		
+						
+					case 1:
+						draw_cicle(pesado, c_pesado);
+						tempo_total = calcula_tempo(c_pesado);
+						break;
+					
+					case 2:
+						draw_cicle(enxague, c_enxague);
+						tempo_total = calcula_tempo(c_enxague);
+						break;
+					
+					case 3:
+						draw_cicle(centrifuga, c_centrifuga);
+						tempo_total = calcula_tempo(c_centrifuga);
+						break;
+					
+					case 4:
+						draw_cicle(fast, c_rapido);
+						tempo_total = calcula_tempo(c_rapido);
+						break;
 					
 				}
-				if (tipo_lavagem%5 == 1 ){
-					draw_cicle(pesado, c_pesado);
-					tempo_total = calcula_tempo(c_pesado);
-					
-				}
-				if (tipo_lavagem%5 == 2 ){
-					draw_cicle(enxague, c_enxague);
-					tempo_total = calcula_tempo(c_enxague);
-					
-				}
-				if (tipo_lavagem%5 == 3 ){
-					draw_cicle(centrifuga, c_centrifuga);
-					tempo_total = calcula_tempo(c_centrifuga);
-					
-				}
-				if (tipo_lavagem%5 == 4 ){
-					draw_cicle(fast, c_rapido);
-					tempo_total = calcula_tempo(c_rapido);
-					
-				}
+				
 				flag_next = 0;
 				flag_back = 0;
 			}
