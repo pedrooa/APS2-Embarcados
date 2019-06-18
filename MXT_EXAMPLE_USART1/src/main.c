@@ -491,11 +491,11 @@ void mxt_handler(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
 		sprintf(buf, "X:%3d Y:%3d \n", conv_x, conv_y);
 		last_status = touch_event.status;
 		if(last_status<60){
-			uint i;
+			uint id_botao; //variavel para indicar o indice do botao pressionado de acordo com a lista de botoes
 			if(!locked){
-				if(processa_touch(botoes, &i, Nbotoes, conv_x, conv_y))
-				if(i != 2){
-					botoes[i].p_handler();
+				if(processa_touch(botoes, &id_botao, Nbotoes, conv_x, conv_y))
+				if(id_botao != 2){ //caso a tela nao esteja travada o botao de indice 2 na lista nao deve funcionar
+					botoes[id_botao].p_handler();
 				}
 			}
 		}
