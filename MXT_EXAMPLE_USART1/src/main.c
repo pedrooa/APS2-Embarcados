@@ -134,6 +134,8 @@
 
 #define DELAY_TOUCH_IN_MS 20
 
+#define ONE_TOUCH 144
+
 /************************************************************************/
 /* variaveis globais                                                    */
 /************************************************************************/
@@ -489,15 +491,15 @@ void mxt_handler(struct mxt_device *device, struct botao botoes[], uint Nbotoes)
 		sprintf(buf, "X:%3d Y:%3d \n", conv_x, conv_y);
 		last_status = touch_event.status;
 		if(last_status<60){
-			uint i;
+			uint id_botao; //variavel para indicar o indice do botao pressionado de acordo com a lista de botoes
 			if(!locked){
-				if(processa_touch(botoes, &i, Nbotoes, conv_x, conv_y))
-				if(i != 2){
-					botoes[i].p_handler();
+				if(processa_touch(botoes, &id_botao, Nbotoes, conv_x, conv_y))
+				if(id_botao != 2){ //caso a tela nao esteja travada o botao de indice 2 na lista nao deve funcionar
+					botoes[id_botao].p_handler();
 				}
 			}
 		}
-		else if(touch_event.status == 144 && locked){
+		else if(touch_event.status == ONE_TOUCH && locked){
 			if(processa_touch(botoes, &i, Nbotoes, conv_x, conv_y)){
 				if(i == 2){
 					printf(";;    touch_counter: %d      ;;", touch_counter);
@@ -662,7 +664,7 @@ int main(void)
 		.paritytype   = USART_SERIAL_PARITY,
 		.stopbits     = USART_SERIAL_STOP_BIT
 	};
-	int tempo_total = calcula_tempo(c_diario);
+	
 	int flag_END = 0;
 	int isOpen = 0;
 	int flag_animation_alarm = 0;
@@ -691,6 +693,7 @@ int main(void)
 	
 	const struct botao botoes[] = {bLocked, botaoStart, bUnlocked, botaoNext, botaoBack};
 	const struct icone load_icons[] = {loading1, loading2, loading3, loading4};
+	int tempo_total = calcula_tempo(c_diario);
 
 	while (true) {
 		/* Check for any pending messages and run message handler if any
